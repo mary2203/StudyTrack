@@ -46,4 +46,31 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    // Relaciones agregadas para StudyTrack
+    public function semesters()
+    {
+        return $this->hasMany(AcademicSemester::class);
+    }
+
+    public function calendarEvents()
+    {
+        return $this->hasMany(CalendarEvent::class);
+    }
+
+    public function recommendations()
+    {
+        return $this->hasMany(SystemRecommendation::class);
+    }
+
+    // Helper: Sincroniza el calendario del usuario mediante el SP
+    public function syncCalendar()
+    {
+        return \Illuminate\Support\Facades\DB::select('CALL sp_sync_calendar_priorities(?)', [$this->id]);
+    }
+
+    // Helper: Genera las recomendaciones de estudio mediante el SP
+    public function generateRecommendations()
+    {
+        return \Illuminate\Support\Facades\DB::select('CALL sp_generate_study_recommendations(?)', [$this->id]);
+    }
 }
