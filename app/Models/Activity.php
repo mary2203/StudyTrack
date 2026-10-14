@@ -13,6 +13,7 @@ class Activity extends Model
     protected $table = 'activities';
 
     protected $fillable = [
+        'user_id',
         'course_id',
         'title',
         'description',
@@ -28,13 +29,23 @@ class Activity extends Model
     ];
 
     protected $casts = [
-        'is_graded'        => 'boolean',
-        'points_possible'  => 'decimal:2',
-        'points_obtained'  => 'decimal:2',
-        'due_datetime'     => 'datetime',
-        'completed_at'     => 'datetime',
-        'estimated_minutes'=> 'integer',
+        'is_graded'         => 'boolean',
+        'points_possible'   => 'decimal:2',
+        'points_obtained'   => 'decimal:2',
+        'due_datetime'      => 'datetime',
+        'completed_at'      => 'datetime',
+        'estimated_minutes' => 'integer',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
+    }
 
     public function course()
     {
