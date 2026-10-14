@@ -521,6 +521,7 @@ ALTER TABLE `cache_locks`
 --
 ALTER TABLE `calendar_events`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_user_activity` (`user_id`,`activity_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `course_id` (`course_id`),
   ADD KEY `activity_id` (`activity_id`),
