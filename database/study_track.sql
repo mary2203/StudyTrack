@@ -93,9 +93,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_study_recommendations` 
         CONCAT('Tienes ', COUNT(a.id), ' actividades concentradas en los próximos 7 días. Planifica tu semana.'),
         'high'
     FROM activities a
-    LEFT JOIN courses c ON a.course_id = c.id
-    LEFT JOIN academic_semesters s ON c.semester_id = s.id
-    WHERE (s.user_id = p_user_id OR a.course_id IS NULL)
+    WHERE a.user_id = p_user_id
       AND a.status IN ('pending', 'in_progress')
       AND a.due_datetime BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
       AND a.deleted_at IS NULL
@@ -105,10 +103,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_study_recommendations` 
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_sync_calendar_priorities` (IN `p_user_id` BIGINT UNSIGNED)   BEGIN
+    -- Quitar eventos de actividades borradas lógicamente
+    DELETE ce
+    FROM calendar_events ce
+    JOIN activities a ON a.id = ce.activity_id
+    WHERE ce.user_id = p_user_id
+      AND a.deleted_at IS NOT NULL;
+
     INSERT INTO calendar_events (user_id, course_id, activity_id, title, event_datetime, calculated_weight, priority_level_id)
     SELECT 
         p_user_id,
-        c.id,
+        a.course_id,
         a.id,
         a.title,
         a.due_datetime,
@@ -119,11 +124,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_sync_calendar_priorities` (IN `p
         COALESCE(c.priority_level_id, a.priority_level_id, 4)
     FROM activities a
     LEFT JOIN courses c ON a.course_id = c.id
-    LEFT JOIN academic_semesters s ON c.semester_id = s.id
     LEFT JOIN priority_rules pr ON c.priority_level_id = pr.id
-    WHERE (s.user_id = p_user_id OR a.course_id IS NULL)
+    WHERE a.user_id = p_user_id
       AND a.deleted_at IS NULL
     ON DUPLICATE KEY UPDATE 
+        course_id = VALUES(course_id),
+        title = VALUES(title),
         event_datetime = VALUES(event_datetime),
         calculated_weight = VALUES(calculated_weight),
         priority_level_id = VALUES(priority_level_id);
@@ -163,6 +169,7 @@ INSERT INTO `academic_semesters` (`id`, `user_id`, `name`, `start_date`, `end_da
 
 CREATE TABLE `activities` (
   `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
   `course_id` bigint(20) UNSIGNED DEFAULT NULL,
   `title` varchar(200) NOT NULL,
   `description` text DEFAULT NULL,
@@ -184,13 +191,13 @@ CREATE TABLE `activities` (
 -- Volcado de datos para la tabla `activities`
 --
 
-INSERT INTO `activities` (`id`, `course_id`, `title`, `description`, `activity_type`, `is_graded`, `points_possible`, `points_obtained`, `due_datetime`, `estimated_minutes`, `status`, `priority_level_id`, `completed_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 1, 'Parcial 1: Álgebra', 'Evaluación de unidad', 'exam', 1, 25.00, 10.00, '2026-10-07 19:16:55', 90, 'completed', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
-(2, 1, 'Hoja de Trabajo: Ecuaciones', 'Ejercicios cap. 4', 'task', 1, 15.00, NULL, '2026-10-14 19:16:55', 45, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
-(3, 2, 'Ensayo Revolución Industrial', 'Mínimo 3 páginas', 'task', 1, 20.00, 20.00, '2026-10-10 19:16:55', 60, 'completed', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
-(4, 2, 'Lectura Capítulo 5', 'Control de lectura', 'reading', 1, 10.00, NULL, '2026-10-22 19:16:55', 30, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
-(5, NULL, 'Llenar formulario de solicitud de graduación', 'Subir papelería a secretaría académica', 'administrative', 0, 0.00, NULL, '2026-10-13 19:16:55', 20, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
-(6, NULL, 'Reunión con Asesor de Graduación', 'Revisión del capítulo metodológico', 'meeting', 0, 0.00, NULL, '2026-10-15 19:16:55', 60, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL);
+INSERT INTO `activities` (`id`, `user_id`, `course_id`, `title`, `description`, `activity_type`, `is_graded`, `points_possible`, `points_obtained`, `due_datetime`, `estimated_minutes`, `status`, `priority_level_id`, `completed_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 1, 1, 'Parcial 1: Álgebra', 'Evaluación de unidad', 'exam', 1, 25.00, 10.00, '2026-10-07 19:16:55', 90, 'completed', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
+(2, 1, 1, 'Hoja de Trabajo: Ecuaciones', 'Ejercicios cap. 4', 'task', 1, 15.00, NULL, '2026-10-14 19:16:55', 45, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
+(3, 1, 2, 'Ensayo Revolución Industrial', 'Mínimo 3 páginas', 'task', 1, 20.00, 20.00, '2026-10-10 19:16:55', 60, 'completed', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
+(4, 1, 2, 'Lectura Capítulo 5', 'Control de lectura', 'reading', 1, 10.00, NULL, '2026-10-22 19:16:55', 30, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
+(5, 1, NULL, 'Llenar formulario de solicitud de graduación', 'Subir papelería a secretaría académica', 'administrative', 0, 0.00, NULL, '2026-10-13 19:16:55', 20, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL),
+(6, 1, NULL, 'Reunión con Asesor de Graduación', 'Revisión del capítulo metodológico', 'meeting', 0, 0.00, NULL, '2026-10-15 19:16:55', 60, 'pending', NULL, NULL, '2026-10-13 01:16:55', '2026-10-13 01:16:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -493,6 +500,7 @@ ALTER TABLE `academic_semesters`
 --
 ALTER TABLE `activities`
   ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
   ADD KEY `course_id` (`course_id`),
   ADD KEY `priority_level_id` (`priority_level_id`);
 
@@ -682,7 +690,8 @@ ALTER TABLE `academic_semesters`
 --
 ALTER TABLE `activities`
   ADD CONSTRAINT `activities_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `activities_ibfk_2` FOREIGN KEY (`priority_level_id`) REFERENCES `priority_rules` (`id`);
+  ADD CONSTRAINT `activities_ibfk_2` FOREIGN KEY (`priority_level_id`) REFERENCES `priority_rules` (`id`),
+  ADD CONSTRAINT `activities_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `calendar_events`
