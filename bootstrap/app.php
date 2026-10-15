@@ -3,17 +3,58 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        api: __DIR__ . '/../routes/api.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // La API no redirige a ninguna página de login: responde 401 en JSON
+        $middleware->redirectGuestsTo(
+            fn(Request $request) => $request->is('api/*') ? null : route('login')
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(
+            fn(Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson()
+        );
+
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'No autenticado.', 'errors' => null], 401);
+            }
+        });
+
+        // 403: la Policy rechazó la acción (o abort(403))
+        $exceptions->render(function (AuthorizationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'No tienes permiso para esta acción.', 'errors' => null], 403);
+            }
+        });
+        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'No tienes permiso para esta acción.', 'errors' => null], 403);
+            }
+        });
+
+        // 404: ruta inexistente o modelo no encontrado (route model binding / findOrFail)
+        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Recurso no encontrado.', 'errors' => null], 404);
+            }
+        });
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Recurso no encontrado.', 'errors' => null], 404);
+            }
+        });
     })->create();
