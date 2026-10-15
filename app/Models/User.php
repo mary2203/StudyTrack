@@ -52,6 +52,11 @@ class User extends Authenticatable
         return $this->hasMany(AcademicSemester::class);
     }
 
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
+    }
+
     public function calendarEvents()
     {
         return $this->hasMany(CalendarEvent::class);
