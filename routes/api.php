@@ -3,6 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\AuthController;
+
+
 /*
 |--------------------------------------------------------------------------
 | API de StudyTrack  (todas las rutas llevan el prefijo /api)
@@ -25,8 +28,8 @@ Route::get('/ping', fn() => response()->json([
 | Rutas públicas de autenticación  (MÓDULO 1: auth, semestres y cursos)
 |--------------------------------------------------------------------------
 */
-// Route::post('/register', [AuthController::class, 'register']);
-// Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+ Route::post('/register', [AuthController::class, 'register']);
+ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -36,12 +39,17 @@ Route::get('/ping', fn() => response()->json([
 Route::middleware('auth:sanctum')->group(function () {
 
     // Ruta protegida de prueba
-    Route::get('/me', fn(Request $request) => response()->json([
+    /*Route::get('/me', fn(Request $request) => response()->json([
         'data' => $request->user()->only(['id', 'name', 'email']),
-    ]));
+    ]));*/
+
+    // Ruta protegida para obtener los datos del usuario autenticado
+    Route::get('/me', [AuthController::class, 'me']);
 
     // ---- MÓDULO 1: auth, semestres y cursos --------------------------------
-    // Route::post('/logout', [AuthController::class, 'logout']);
+     Route::post('/logout', [AuthController::class, 'logout']);
+     //comente estas rutas para probar el funcionamiento de la api de auth
+     
     // Route::get('/semesters/current', [SemesterController::class, 'current']);
     // Route::apiResource('semesters', SemesterController::class);
     // Route::apiResource('courses', CourseController::class);
