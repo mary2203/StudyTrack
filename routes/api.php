@@ -1,7 +1,14 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\CourseController; 
+
 
 /*
 |--------------------------------------------------------------------------
@@ -25,8 +32,8 @@ Route::get('/ping', fn() => response()->json([
 | Rutas públicas de autenticación  (MÓDULO 1: auth, semestres y cursos)
 |--------------------------------------------------------------------------
 */
-// Route::post('/register', [AuthController::class, 'register']);
-// Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+ Route::post('/register', [AuthController::class, 'register']);
+ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -36,21 +43,24 @@ Route::get('/ping', fn() => response()->json([
 Route::middleware('auth:sanctum')->group(function () {
 
     // Ruta protegida de prueba
-    Route::get('/me', fn(Request $request) => response()->json([
+    /*Route::get('/me', fn(Request $request) => response()->json([
         'data' => $request->user()->only(['id', 'name', 'email']),
-    ]));
+    ]));*/
+
+    // Ruta protegida para obtener los datos del usuario autenticado
+    Route::get('/me', [AuthController::class, 'me']);
 
     // ---- MÓDULO 1: auth, semestres y cursos --------------------------------
-    // Route::post('/logout', [AuthController::class, 'logout']);
-    // Route::get('/semesters/current', [SemesterController::class, 'current']);
-    // Route::apiResource('semesters', SemesterController::class);
-    // Route::apiResource('courses', CourseController::class);
+     Route::post('/logout', [AuthController::class, 'logout']);
+     Route::get('/semesters/current', [SemesterController::class, 'current']);
+     Route::apiResource('semesters', SemesterController::class);
+     Route::apiResource('courses', CourseController::class);
 
     // ---- MÓDULO 2: actividades y calendario --------------------------------
-    // Route::apiResource('activities', ActivityController::class);
-    // Route::patch('/activities/{activity}/grade', [ActivityController::class, 'grade']);
-    // Route::patch('/activities/{activity}/complete', [ActivityController::class, 'complete']);
-    // Route::get('/calendar', [CalendarController::class, 'index']);
+    Route::apiResource('activities', ActivityController::class);
+    Route::patch('/activities/{activity}/grade', [ActivityController::class, 'grade']);
+    Route::patch('/activities/{activity}/complete', [ActivityController::class, 'complete']);
+    Route::get('/calendar', [CalendarController::class, 'index']);
 
     // ---- MÓDULO 3: dashboard, recomendaciones y analítica ------------------
     // Route::get('/dashboard', [DashboardController::class, 'index']);
