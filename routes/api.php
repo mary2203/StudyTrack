@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -55,10 +57,10 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::apiResource('courses', CourseController::class);
 
     // ---- MÓDULO 2: actividades y calendario --------------------------------
-    // Route::apiResource('activities', ActivityController::class);
-    // Route::patch('/activities/{activity}/grade', [ActivityController::class, 'grade']);
-    // Route::patch('/activities/{activity}/complete', [ActivityController::class, 'complete']);
-    // Route::get('/calendar', [CalendarController::class, 'index']);
+    Route::apiResource('activities', ActivityController::class);
+    Route::patch('/activities/{activity}/grade', [ActivityController::class, 'grade']);
+    Route::patch('/activities/{activity}/complete', [ActivityController::class, 'complete']);
+    Route::get('/calendar', [CalendarController::class, 'index']);
 
     // ---- MÓDULO 3: dashboard, recomendaciones y analítica ------------------
     // Route::get('/dashboard', [DashboardController::class, 'index']);
