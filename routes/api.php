@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\CourseController; 
 
 
 /*
@@ -51,7 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::post('/logout', [AuthController::class, 'logout']);
      Route::get('/semesters/current', [SemesterController::class, 'current']);
      Route::apiResource('semesters', SemesterController::class);
-    // Route::apiResource('courses', CourseController::class);
+     Route::apiResource('courses', CourseController::class);
 
     // ---- MÓDULO 2: actividades y calendario --------------------------------
     // Route::apiResource('activities', ActivityController::class);
