@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SemesterController;
 
 
 /*
@@ -48,10 +49,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- MÓDULO 1: auth, semestres y cursos --------------------------------
      Route::post('/logout', [AuthController::class, 'logout']);
-     //comente estas rutas para probar el funcionamiento de la api de auth
-     
-    // Route::get('/semesters/current', [SemesterController::class, 'current']);
-    // Route::apiResource('semesters', SemesterController::class);
+     Route::get('/semesters/current', [SemesterController::class, 'current']);
+     Route::apiResource('semesters', SemesterController::class);
     // Route::apiResource('courses', CourseController::class);
 
     // ---- MÓDULO 2: actividades y calendario --------------------------------

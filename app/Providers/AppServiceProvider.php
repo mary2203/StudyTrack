@@ -4,6 +4,12 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+// Importar las clases necesarias para la política
+use Illuminate\Support\Facades\Gate;
+
+use App\Models\AcademicSemester;
+use App\Policies\SemesterPolicy;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -19,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar la política para el modelo AcademicSemester
+        Gate::policy(AcademicSemester::class, SemesterPolicy::class);
     }
 }
