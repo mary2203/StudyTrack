@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\AcademicSemester;
 use App\Models\Activity;
 use App\Models\Course;
-use App\Models\SystemRecommendation;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -17,7 +16,10 @@ use Illuminate\Support\Carbon;
  */
 class DashboardService
 {
-    public function __construct(private AnalyticsService $analytics) {}
+    public function __construct(
+        private AnalyticsService $analytics,
+        private RecommendationService $recommendations,
+    ) {}
 
     /**
      * @return array<string, mixed>|null  null si el usuario no tiene semestre actual
@@ -151,9 +153,7 @@ class DashboardService
                     'color_hex' => $a->course->color_hex,
                 ] : null,
             ])->values()->all(),
-            'recommendations_unread' => SystemRecommendation::where('user_id', $user->id)
-                ->where('is_read', false)
-                ->count(),
+            'recommendations_unread' => $this->recommendations->activeQuery($user)->count(),
         ];
     }
 }

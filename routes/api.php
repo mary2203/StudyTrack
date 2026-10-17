@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RecommendationController;
 
 
 /*
@@ -65,7 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- MÓDULO 3: dashboard, recomendaciones y analítica ------------------
     Route::get('/dashboard', [DashboardController::class, 'index']);
-    // Route::get('/recommendations', [RecommendationController::class, 'index']);
+    Route::get('/recommendations', [RecommendationController::class, 'index']);
     // Route::patch('/recommendations/{recommendation}/read', [RecommendationController::class, 'markAsRead']);
     // Route::get('/analytics/{level}', [AnalyticsController::class, 'show'])
     //     ->whereIn('level', ['descriptive', 'diagnostic', 'predictive', 'prescriptive']);
