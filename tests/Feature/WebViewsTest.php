@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Services\DashboardService;
+use App\Services\WebDashboardService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -90,7 +92,35 @@ class WebViewsTest extends TestCase
         $this->assertAuthenticated();
     }
 
-    public function test_dashboard_requires_authentication_and_renders_service_data(): void
+    private function pageData(?array $dashboard): array
+    {
+        return [
+            'dashboard' => $dashboard,
+            'activities' => new Collection,
+            'calendar' => [
+                'week_start' => Carbon::parse('2026-10-12'),
+                'week_end' => Carbon::parse('2026-10-18'),
+                'events' => new Collection,
+            ],
+            'recommendations' => new Collection,
+            'analytics' => [
+                'descriptive' => ['summary' => [
+                    'activities_total' => 0,
+                    'pending' => 0,
+                    'overdue' => 0,
+                    'completed' => 0,
+                    'graded' => 0,
+                ], 'courses' => []],
+                'diagnostic' => ['events' => []],
+                'predictive' => ['method' => 'Método de prueba.', 'overdue_policy' => 'Política de prueba.', 'courses' => []],
+                'prescriptive' => ['actions' => []],
+            ],
+            'activity_search' => null,
+            'activity_status' => null,
+        ];
+    }
+
+    public function test_dashboard_requires_authentication_and_renders_prototype_sections(): void
     {
         $this->get('/dashboard')->assertRedirect(route('login'));
 
@@ -119,16 +149,27 @@ class WebViewsTest extends TestCase
             'upcoming' => [],
             'recommendations_unread' => 0,
         ];
-        $dashboard = $this->mock(DashboardService::class);
-        $dashboard->shouldReceive('forUser')->once()->withArgs(fn (User $requestedUser) => $requestedUser->is($user))
-            ->andReturn($dashboardData);
+        $this->mock(WebDashboardService::class)
+            ->shouldReceive('forUser')
+            ->once()
+            ->with($user, null, null)
+            ->andReturn($this->pageData($dashboardData));
 
         $this->get('/dashboard')
             ->assertOk()
-            ->assertSee('Hola, Ana.')
+            ->assertSee('Ana')
             ->assertSee('Semestre A')
             ->assertSee('Progreso')
-            ->assertSee('50%');
+            ->assertSee('50%')
+            ->assertSee('Mis cursos')
+            ->assertSee('Mis actividades')
+            ->assertSee('Calendario académico')
+            ->assertSee('Descriptiva · ¿Qué pasó?')
+            ->assertSee('Diagnóstica · ¿Por qué?')
+            ->assertSee('Predictiva · ¿Qué podría pasar?')
+            ->assertSee('Prescriptiva · ¿Qué conviene hacer?')
+            ->assertDontSee('<style')
+            ->assertDontSee('<link');
 
         $this->post('/logout')->assertRedirect(route('login'));
         $this->assertGuest();
@@ -143,10 +184,11 @@ class WebViewsTest extends TestCase
         ]);
         $this->actingAs($user);
 
-        $this->mock(DashboardService::class)
+        $this->mock(WebDashboardService::class)
             ->shouldReceive('forUser')
             ->once()
-            ->andReturn(null);
+            ->with($user, null, null)
+            ->andReturn($this->pageData(null));
 
         $this->get('/dashboard')
             ->assertOk()
