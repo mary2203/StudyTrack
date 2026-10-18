@@ -57,3 +57,22 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## StudyTrack analytics API
+
+The authenticated `GET /api/analytics/{level}` endpoint accepts `descriptive`,
+`diagnostic`, `predictive`, or `prescriptive`. It reports on the current semester:
+
+- **Descriptive:** activity counts and course averages.
+- **Diagnostic:** up to 50 recent audit-log events belonging to the authenticated user.
+- **Predictive:** per-course risk based on whether the target grade is still attainable.
+- **Prescriptive:** study and recovery actions based on each course's predictive risk.
+
+Predictive risk is an attainability indicator, not a statistically calibrated
+probability. It compares the average needed on remaining graded points with the
+student's average on graded activities: low when the target is already reached
+or the required average is no higher than the current average, medium when a
+higher but attainable average is needed, and high when the target is no longer
+attainable at 100%. Courses without a target or usable grade data return
+`insufficient_data`. Graded activities that are overdue and still ungraded count
+as zero and are not treated as remaining points.

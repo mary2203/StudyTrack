@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Activity;
 use App\Observers\ActivityObserver;
 use Illuminate\Support\ServiceProvider;
+use App\Observers\AuditObserver;
 
 // Importar las clases necesarias para la política
 use Illuminate\Support\Facades\Gate;
@@ -35,5 +36,9 @@ class AppServiceProvider extends ServiceProvider
         // Registrar la política para el modelo AcademicSemester
         Gate::policy(AcademicSemester::class, SemesterPolicy::class);
         Gate::policy(Course::class, CoursePolicy::class);
+
+        // 
+        Activity::observe(AuditObserver::class);
+        Course::observe(AuditObserver::class);
     }
 }
