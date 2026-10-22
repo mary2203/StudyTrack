@@ -145,12 +145,9 @@ class WebViewsTest extends TestCase
                 'predictive' => [
                     'method' => 'Método de prueba.',
                     'overdue_policy' => 'Política de prueba.',
-                    'final_exam_eligibility' => [
-                        'components' => ['zona' => 30, 'parcial_1' => 20, 'parcial_2' => 20],
-                        'maximum_points_before_final' => 70,
-                        'minimum_points' => 71,
-                        'attainable' => false,
-                        'shortfall' => 1,
+                    'grading_rule' => [
+                        'components' => ['zona' => 30, 'parcial_1' => 20, 'parcial_2' => 20, 'parcial_final' => 30],
+                        'minimum_passing_grade' => 71,
                     ],
                     'courses' => [],
                 ],

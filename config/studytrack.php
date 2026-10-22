@@ -7,5 +7,5 @@ return [
         'parcial_2' => 20,
         'parcial_final' => 30,
     ],
-    'minimum_points_before_final' => 71,
+    'minimum_passing_grade' => 71,
 ];

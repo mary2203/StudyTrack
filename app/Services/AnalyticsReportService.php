@@ -109,20 +109,14 @@ class AnalyticsReportService
     private function predictive(Collection $courses, int $userId): array
     {
         $components = config('studytrack.grading_components');
-        $maximumBeforeFinal = collect($components)
-            ->except('parcial_final')
-            ->sum();
-        $minimumBeforeFinal = (int) config('studytrack.minimum_points_before_final');
+        $minimumPassingGrade = (int) config('studytrack.minimum_passing_grade');
 
         return [
-            'method' => 'Alcanzabilidad con puntos restantes; no es una probabilidad estadística.',
-            'overdue_policy' => 'Las actividades calificables vencidas sin nota se consideran con cero puntos y no quedan como puntos disponibles.',
-            'final_exam_eligibility' => [
+            'method' => 'Estimación de aprobación según los puntos de las actividades registradas; no es una probabilidad estadística ni una nota oficial ponderada.',
+            'overdue_policy' => 'Las actividades vencidas sin nota se consideran con cero puntos. Las actividades entregadas pero aún sin calificar siguen contando como puntos posibles.',
+            'grading_rule' => [
                 'components' => $components,
-                'minimum_points' => $minimumBeforeFinal,
-                'maximum_points_before_final' => $maximumBeforeFinal,
-                'shortfall' => max(0, $minimumBeforeFinal - $maximumBeforeFinal),
-                'attainable' => $minimumBeforeFinal <= $maximumBeforeFinal,
+                'minimum_passing_grade' => $minimumPassingGrade,
             ],
             'courses' => $courses->map(fn (Course $course) => $this->courseRisk($course, $userId))->values()->all(),
         ];
@@ -189,28 +183,27 @@ class AnalyticsReportService
             }
 
             $isOverdue = $activity->status === 'overdue'
-                || ($activity->due_datetime !== null && $activity->due_datetime->lt($now));
+                || ($activity->status !== 'completed'
+                    && $activity->due_datetime !== null
+                    && $activity->due_datetime->lt($now));
 
-            if ($isOverdue || $activity->status === 'completed') {
-                if ($isOverdue) {
-                    $overdueUngraded += $possible;
-                }
-
+            if ($isOverdue) {
+                $overdueUngraded += $possible;
                 continue;
             }
 
             $remaining += $possible;
         }
 
-        $target = $course->target_grade === null ? null : (float) $course->target_grade;
+        $passingGrade = (float) config('studytrack.minimum_passing_grade');
         $average = $scoredPossible > 0 ? ($earned / $scoredPossible) * 100 : null;
-        $requiredPoints = $target === null ? null : ($target / 100) * $totalPossible - $earned;
-        $requiredAverage = $remaining > 0 && $requiredPoints !== null
+        $requiredPoints = ($passingGrade / 100) * $totalPossible - $earned;
+        $requiredAverage = $remaining > 0
             ? ($requiredPoints / $remaining) * 100
             : null;
         $maximumFinal = $totalPossible > 0 ? (($earned + $remaining) / $totalPossible) * 100 : null;
 
-        if ($totalPossible <= 0 || $target === null) {
+        if ($totalPossible <= 0) {
             $risk = 'insufficient_data';
         } elseif ($requiredPoints > $remaining + 0.00001) {
             $risk = 'high';
@@ -225,12 +218,14 @@ class AnalyticsReportService
         return [
             'course_id' => $course->id,
             'course_name' => $course->name,
-            'target_grade' => $target === null ? null : round($target, 2),
+            'passing_grade' => round($passingGrade, 2),
+            'target_grade' => $course->target_grade === null ? null : round((float) $course->target_grade, 2),
             'current_average' => $average === null ? null : round($average, 2),
             'required_average_on_remaining' => $requiredAverage === null
                 ? null
                 : round(max(0, $requiredAverage), 2),
             'maximum_final_grade' => $maximumFinal === null ? null : round($maximumFinal, 2),
+            'pass_is_reachable' => $maximumFinal !== null && $maximumFinal + 0.00001 >= $passingGrade,
             'graded_activities' => $activities->whereNotNull('points_obtained')->count(),
             'remaining_points' => round($remaining, 2),
             'overdue_ungraded_points_counted_as_zero' => round($overdueUngraded, 2),

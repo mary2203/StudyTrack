@@ -189,10 +189,12 @@ class AnalyticsApiTest extends TestCase
         $this->getJson('/api/analytics/predictive')
             ->assertOk()
             ->assertJsonPath('data.data.courses.0.current_average', 40)
-            ->assertJsonPath('data.data.courses.0.required_average_on_remaining', 89.38)
+            ->assertJsonPath('data.data.courses.0.required_average_on_remaining', 108.13)
             ->assertJsonPath('data.data.courses.0.overdue_ungraded_points_counted_as_zero', 10)
             ->assertJsonPath('data.data.courses.0.remaining_points', 40)
-            ->assertJsonPath('data.data.courses.0.risk_level', 'medium');
+            ->assertJsonPath('data.data.courses.0.passing_grade', 71)
+            ->assertJsonPath('data.data.courses.0.pass_is_reachable', false)
+            ->assertJsonPath('data.data.courses.0.risk_level', 'high');
     }
 
     public function test_predictive_distinguishes_unreachable_and_insufficient_data(): void
@@ -260,20 +262,39 @@ class AnalyticsApiTest extends TestCase
             ->assertJsonPath('data.data.courses.0.risk_level', 'insufficient_data');
     }
 
-    public function test_predictive_reports_the_final_exam_eligibility_rule_as_unattainable(): void
+    public function test_predictive_reports_the_passing_grade_and_official_weights(): void
     {
         Sanctum::actingAs($this->student);
 
         $this->getJson('/api/analytics/predictive')
             ->assertOk()
-            ->assertJsonPath('data.data.final_exam_eligibility.components.zona', 30)
-            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_1', 20)
-            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_2', 20)
-            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_final', 30)
-            ->assertJsonPath('data.data.final_exam_eligibility.minimum_points', 71)
-            ->assertJsonPath('data.data.final_exam_eligibility.maximum_points_before_final', 70)
-            ->assertJsonPath('data.data.final_exam_eligibility.shortfall', 1)
-            ->assertJsonPath('data.data.final_exam_eligibility.attainable', false);
+            ->assertJsonPath('data.data.grading_rule.components.zona', 30)
+            ->assertJsonPath('data.data.grading_rule.components.parcial_1', 20)
+            ->assertJsonPath('data.data.grading_rule.components.parcial_2', 20)
+            ->assertJsonPath('data.data.grading_rule.components.parcial_final', 30)
+            ->assertJsonPath('data.data.grading_rule.minimum_passing_grade', 71);
+    }
+
+    public function test_predictive_keeps_submitted_ungraded_activities_as_remaining_points(): void
+    {
+        DB::table('activities')->insert([
+            'user_id' => $this->student->id,
+            'course_id' => 1,
+            'title' => 'Entregada sin nota',
+            'is_graded' => true,
+            'points_possible' => 20,
+            'points_obtained' => null,
+            'due_datetime' => now()->subDay(),
+            'status' => 'completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Sanctum::actingAs($this->student);
+        $this->getJson('/api/analytics/predictive')
+            ->assertOk()
+            ->assertJsonPath('data.data.courses.0.remaining_points', 20)
+            ->assertJsonPath('data.data.courses.0.maximum_final_grade', 100);
     }
 
     public function test_diagnostic_returns_only_the_authenticated_users_audit_events(): void

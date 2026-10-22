@@ -589,24 +589,29 @@
                             <article class="card analytics-card" id="analitica-predictiva">
                                 <span class="bubble">03</span><h2>Predictiva · ¿Qué podría pasar?</h2>
                                 <p>{{ $analytics['predictive']['method'] }}</p><p class="analytics-note">{{ $analytics['predictive']['overdue_policy'] }}</p>
-                                @php($eligibility = $analytics['predictive']['final_exam_eligibility'])
+                                @php($gradingRule = $analytics['predictive']['grading_rule'])
                                 <p class="analytics-note">
-                                    Derecho a examen final:
-                                    Zona {{ $eligibility['components']['zona'] }} + Parcial 1 {{ $eligibility['components']['parcial_1'] }} + Parcial 2 {{ $eligibility['components']['parcial_2'] }} = máximo {{ $eligibility['maximum_points_before_final'] }} puntos antes del final.
-                                    El requisito es {{ $eligibility['minimum_points'] }} puntos.
-                                    @if ($eligibility['attainable'])
-                                        El requisito es alcanzable.
-                                    @else
-                                        <strong>No es alcanzable con esta ponderación: faltan {{ $eligibility['shortfall'] }} puntos incluso con el máximo.</strong>
-                                    @endif
+                                    Para aprobar necesitas al menos {{ $gradingRule['minimum_passing_grade'] }}% de nota final.
+                                    La ponderación oficial es Zona {{ $gradingRule['components']['zona'] }}%, Parcial 1 {{ $gradingRule['components']['parcial_1'] }}%, Parcial 2 {{ $gradingRule['components']['parcial_2'] }}% y Parcial final {{ $gradingRule['components']['parcial_final'] }}%.
+                                    Esta estimación aún no aplica esos pesos: calcula sobre los puntos posibles de las actividades registradas en StudyTrack.
                                 </p>
                                 <ul class="analytic-list">
                                     @forelse ($analytics['predictive']['courses'] as $course)
                                         <li>
                                             <b>{{ $course['course_name'] }}</b><span>Riesgo: {{ ['high' => 'Alto', 'medium' => 'Medio', 'low' => 'Bajo', 'critical' => 'Crítico'][$course['risk_level']] ?? ucfirst($course['risk_level']) }}</span>
                                             @if ($course['current_average'] !== null)<span>Promedio actual: {{ number_format($course['current_average'], 2) }}%</span>@endif
-                                            @if ($course['required_average_on_remaining'] !== null)<span>Promedio requerido en lo restante: {{ number_format($course['required_average_on_remaining'], 2) }}%</span>@endif
-                                            @if ($course['maximum_final_grade'] !== null)<span>Máximo final estimado: {{ number_format($course['maximum_final_grade'], 2) }}%</span>@endif
+                                            @if ($course['required_average_on_remaining'] !== null)
+                                                <span>
+                                                    @if ($course['required_average_on_remaining'] > 100)
+                                                        Para aprobar necesitarías {{ number_format($course['required_average_on_remaining'], 2) }}% en lo restante (no alcanzable).
+                                                    @else
+                                                        Promedio necesario para aprobar en lo restante: {{ number_format($course['required_average_on_remaining'], 2) }}%.
+                                                    @endif
+                                                </span>
+                                            @elseif ($course['maximum_final_grade'] !== null && !$course['pass_is_reachable'])
+                                                <span>No hay puntos pendientes suficientes para alcanzar el mínimo de aprobación.</span>
+                                            @endif
+                                            @if ($course['maximum_final_grade'] !== null)<span>Máximo estimado con actividades registradas: {{ number_format($course['maximum_final_grade'], 2) }}%</span>@endif
                                         </li>
                                     @empty
                                         <li>No hay cursos disponibles para estimar el riesgo.</li>
