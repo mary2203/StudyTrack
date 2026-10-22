@@ -78,6 +78,11 @@ En una terminal:
 php artisan serve --host=localhost --port=8000
 ```
 
+En otra terminal:
+```bash
+npm run dev
+```
+
 Abre `http://localhost:8000`, crea una cuenta local o inicia sesión y, desde el
 panel, elige **Conectar Google Classroom**. Autoriza el acceso con el correo
 añadido a Usuarios de prueba que tenga acceso a los cursos deseados. Luego usa
