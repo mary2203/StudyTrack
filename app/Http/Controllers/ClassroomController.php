@@ -56,9 +56,9 @@ class ClassroomController extends Controller
                     'refresh_token' => $credentials['refresh_token'],
                 ],
             );
-            $count = $classroom->sync($user);
+            $result = $classroom->sync($user);
 
-            return to_route('dashboard')->with('classroom_status', "Cuenta conectada. Se sincronizaron {$count} actividades.");
+            return to_route('dashboard')->with('classroom_status', $this->syncMessage($result, 'Cuenta conectada.'));
         } catch (RuntimeException $exception) {
             return to_route('dashboard')->withErrors(['classroom' => $exception->getMessage()]);
         }
@@ -67,9 +67,9 @@ class ClassroomController extends Controller
     public function sync(Request $request, GoogleClassroomService $classroom): RedirectResponse
     {
         try {
-            $count = $classroom->sync($request->user());
+            $result = $classroom->sync($request->user());
 
-            return to_route('dashboard')->with('classroom_status', "Sincronización completada: {$count} actividades actualizadas.");
+            return to_route('dashboard')->with('classroom_status', $this->syncMessage($result, 'Sincronización completada.'));
         } catch (RuntimeException $exception) {
             return to_route('dashboard')->withErrors(['classroom' => $exception->getMessage()]);
         }
@@ -142,5 +142,15 @@ class ClassroomController extends Controller
         $import->update(['status' => 'ignored']);
 
         return to_route('dashboard')->with('classroom_status', 'El curso se omitió. Seguirá disponible para importarlo más adelante.');
+    }
+
+    /**
+     * @param array{courses_found: int, pending_courses: int, activities_synced: int} $result
+     */
+    private function syncMessage(array $result, string $prefix): string
+    {
+        return "{$prefix} {$result['courses_found']} cursos encontrados, "
+            . "{$result['activities_synced']} actividades sincronizadas y "
+            . "{$result['pending_courses']} cursos pendientes de asignar.";
     }
 }

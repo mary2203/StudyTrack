@@ -23,7 +23,8 @@ La autorización solicita únicamente lectura de cursos, tareas y entregas/calif
 
 ## Comportamiento
 
-- Todos los cursos nuevos quedan pendientes de asignar porque el estado de Classroom no indica a qué semestre académico pertenecen. El usuario elige un semestre existente, crea uno histórico o los omite. Omitirlos solo los oculta de la lista pendiente; no elimina datos de Classroom.
+- Se consultan los cursos activos, archivados y provisionados. Todos los cursos nuevos quedan pendientes de asignar porque el estado de Classroom no indica a qué semestre académico pertenecen. El usuario elige un semestre existente, crea uno histórico o los omite. Omitirlos solo los oculta de la lista pendiente; no elimina datos de Classroom.
+- El resultado de sincronizar muestra el total de cursos encontrados, actividades sincronizadas y cursos pendientes de asignación.
 - Las tareas publicadas se importan como actividades. StudyTrack conserva fechas ausentes como «Sin fecha», y muestra el estado reportado por Classroom y la calificación asignada por el docente.
 - La sincronización manual está disponible en el panel además del proceso automático.
 - Los cursos y actividades sincronizados son de solo lectura en StudyTrack, incluidos el estado, la calificación y la eliminación. El usuario sí puede crear actividades locales dentro de un curso sincronizado; esas actividades no se escriben en Classroom.

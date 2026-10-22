@@ -20,8 +20,12 @@ class SyncClassroom extends Command
         ClassroomConnection::query()->with('user')->chunkById(100, function ($connections) use ($classroom, &$failed) {
             foreach ($connections as $connection) {
                 try {
-                    $count = $classroom->sync($connection->user);
-                    $this->info("Usuario {$connection->user_id}: {$count} actividades sincronizadas.");
+                    $result = $classroom->sync($connection->user);
+                    $this->info(
+                        "Usuario {$connection->user_id}: {$result['courses_found']} cursos encontrados, "
+                        . "{$result['activities_synced']} actividades sincronizadas, "
+                        . "{$result['pending_courses']} pendientes de asignar."
+                    );
                 } catch (Throwable $exception) {
                     $failed = true;
                     report($exception);

@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -16,6 +17,8 @@ class GoogleClassroomService
 {
     private const BASE_URL = 'https://classroom.googleapis.com/v1';
     private const OAUTH_URL = 'https://oauth2.googleapis.com/token';
+    private const COURSE_STATES = ['ACTIVE', 'ARCHIVED', 'PROVISIONED'];
+    private const SUBMISSION_BATCH_SIZE = 8;
     private const SCOPES = [
         'https://www.googleapis.com/auth/classroom.courses.readonly',
         'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
@@ -84,15 +87,26 @@ class GoogleClassroomService
         }
     }
 
-    public function sync(User $user): int
+    /**
+     * @return array{courses_found: int, pending_courses: int, activities_synced: int}
+     */
+    public function sync(User $user): array
     {
         $connection = ClassroomConnection::where('user_id', $user->id)->firstOrFail();
         $accessToken = $this->accessToken($connection);
-        $client = Http::withToken($accessToken)->acceptJson();
-        $courses = array_merge(
-            $this->listAll($client, self::BASE_URL . '/courses', ['courseStates' => 'ACTIVE']),
-            $this->listAll($client, self::BASE_URL . '/courses', ['courseStates' => 'ARCHIVED']),
-        );
+        $client = Http::withToken($accessToken)
+            ->acceptJson()
+            ->connectTimeout(5)
+            ->timeout(15);
+        $coursesById = [];
+        foreach (self::COURSE_STATES as $courseState) {
+            foreach ($this->listAll($client, self::BASE_URL . '/courses', ['courseStates' => $courseState]) as $course) {
+                if (!empty($course['id'])) {
+                    $coursesById[$course['id']] = $course;
+                }
+            }
+        }
+        $courses = array_values($coursesById);
         $syncedActivities = 0;
         $hasImportedCourses = false;
 
@@ -128,6 +142,9 @@ class GoogleClassroomService
             if ($existing->status !== 'imported' || !$existing->course_id) {
                 continue;
             }
+            if ($state === 'PROVISIONED') {
+                continue;
+            }
             $hasImportedCourses = true;
 
             $course = Course::whereKey($existing->course_id)->first();
@@ -146,12 +163,14 @@ class GoogleClassroomService
                 self::BASE_URL . '/courses/' . rawurlencode($googleCourse['id']) . '/courseWork',
                 ['courseWorkStates' => 'PUBLISHED'],
             );
+            $submissionsByWork = $this->studentSubmissions($accessToken, $googleCourse['id'], $workItems);
+
             foreach ($workItems as $work) {
                 if (empty($work['id']) || empty($work['title'])) {
                     continue;
                 }
 
-                $submission = $this->studentSubmission($client, $googleCourse['id'], $work['id']);
+                $submission = $submissionsByWork[$work['id']] ?? null;
                 $due = $this->dueDateTime($work);
                 $isGraded = isset($work['maxPoints']) && (float) $work['maxPoints'] > 0;
                 $submissionState = $submission['state'] ?? 'NEW';
@@ -191,7 +210,13 @@ class GoogleClassroomService
             app(AnalyticsService::class)->refreshAll($user);
         }
 
-        return $syncedActivities;
+        return [
+            'courses_found' => count($courses),
+            'pending_courses' => ClassroomCourseImport::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->count(),
+            'activities_synced' => $syncedActivities,
+        ];
     }
 
     private function accessToken(ClassroomConnection $connection): string
@@ -233,15 +258,49 @@ class GoogleClassroomService
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @param list<array<string, mixed>> $workItems
+     * @return array<string, array<string, mixed>>
      */
-    private function studentSubmission(PendingRequest $client, string $courseId, string $courseWorkId): ?array
+    private function studentSubmissions(string $accessToken, string $courseId, array $workItems): array
     {
-        $url = self::BASE_URL . '/courses/' . rawurlencode($courseId)
-            . '/courseWork/' . rawurlencode($courseWorkId) . '/studentSubmissions';
-        $submissions = $this->listAll($client, $url, ['userId' => 'me']);
+        $submissionsByWork = [];
+        foreach (array_chunk($workItems, self::SUBMISSION_BATCH_SIZE) as $batch) {
+            $responses = Http::pool(function (Pool $pool) use ($batch, $accessToken, $courseId) {
+                $requests = [];
+                foreach ($batch as $work) {
+                    if (empty($work['id'])) {
+                        continue;
+                    }
 
-        return $submissions[0] ?? null;
+                    $url = self::BASE_URL . '/courses/' . rawurlencode($courseId)
+                        . '/courseWork/' . rawurlencode($work['id']) . '/studentSubmissions';
+                    $requests[] = $pool
+                        ->as((string) $work['id'])
+                        ->withToken($accessToken)
+                        ->acceptJson()
+                        ->connectTimeout(5)
+                        ->timeout(15)
+                        ->get($url, ['userId' => 'me', 'pageSize' => 1]);
+                }
+
+                return $requests;
+            });
+
+            foreach ($batch as $work) {
+                if (empty($work['id']) || !isset($responses[$work['id']])) {
+                    continue;
+                }
+
+                $response = $responses[$work['id']];
+                $data = $this->decodeResponse($response->status(), $response->json());
+                $submission = $data['studentSubmissions'][0] ?? null;
+                if ($submission) {
+                    $submissionsByWork[$work['id']] = $submission;
+                }
+            }
+        }
+
+        return $submissionsByWork;
     }
 
     private function dueDateTime(array $work): ?string

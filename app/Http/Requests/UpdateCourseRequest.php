@@ -26,7 +26,7 @@ class UpdateCourseRequest extends FormRequest
             //
             'semester_id' => ['sometimes', 'required', 'integer', 'exists:academic_semesters,id'],
             'name' => ['sometimes', 'required', 'string', 'max:150'],
-            'code' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'code' => ['sometimes', 'nullable', 'string', 'max:255'],
             'color_hex' => ['sometimes', 'nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'target_grade' => ['sometimes', 'nullable', 'numeric', 'between:0,100'],
         ];
