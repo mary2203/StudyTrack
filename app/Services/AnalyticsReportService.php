@@ -108,9 +108,22 @@ class AnalyticsReportService
     /** @param Collection<int, Course> $courses */
     private function predictive(Collection $courses, int $userId): array
     {
+        $components = config('studytrack.grading_components');
+        $maximumBeforeFinal = collect($components)
+            ->except('parcial_final')
+            ->sum();
+        $minimumBeforeFinal = (int) config('studytrack.minimum_points_before_final');
+
         return [
             'method' => 'Alcanzabilidad con puntos restantes; no es una probabilidad estadística.',
             'overdue_policy' => 'Las actividades calificables vencidas sin nota se consideran con cero puntos y no quedan como puntos disponibles.',
+            'final_exam_eligibility' => [
+                'components' => $components,
+                'minimum_points' => $minimumBeforeFinal,
+                'maximum_points_before_final' => $maximumBeforeFinal,
+                'shortfall' => max(0, $minimumBeforeFinal - $maximumBeforeFinal),
+                'attainable' => $minimumBeforeFinal <= $maximumBeforeFinal,
+            ],
             'courses' => $courses->map(fn (Course $course) => $this->courseRisk($course, $userId))->values()->all(),
         ];
     }

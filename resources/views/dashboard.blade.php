@@ -506,6 +506,17 @@
                             <article class="card analytics-card" id="analitica-predictiva">
                                 <span class="bubble">03</span><h2>Predictiva · ¿Qué podría pasar?</h2>
                                 <p>{{ $analytics['predictive']['method'] }}</p><p class="analytics-note">{{ $analytics['predictive']['overdue_policy'] }}</p>
+                                @php($eligibility = $analytics['predictive']['final_exam_eligibility'])
+                                <p class="analytics-note">
+                                    Derecho a examen final:
+                                    Zona {{ $eligibility['components']['zona'] }} + Parcial 1 {{ $eligibility['components']['parcial_1'] }} + Parcial 2 {{ $eligibility['components']['parcial_2'] }} = máximo {{ $eligibility['maximum_points_before_final'] }} puntos antes del final.
+                                    El requisito es {{ $eligibility['minimum_points'] }} puntos.
+                                    @if ($eligibility['attainable'])
+                                        El requisito es alcanzable.
+                                    @else
+                                        <strong>No es alcanzable con esta ponderación: faltan {{ $eligibility['shortfall'] }} puntos incluso con el máximo.</strong>
+                                    @endif
+                                </p>
                                 <ul class="analytic-list">
                                     @forelse ($analytics['predictive']['courses'] as $course)
                                         <li>

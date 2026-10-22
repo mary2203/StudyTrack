@@ -260,6 +260,22 @@ class AnalyticsApiTest extends TestCase
             ->assertJsonPath('data.data.courses.0.risk_level', 'insufficient_data');
     }
 
+    public function test_predictive_reports_the_final_exam_eligibility_rule_as_unattainable(): void
+    {
+        Sanctum::actingAs($this->student);
+
+        $this->getJson('/api/analytics/predictive')
+            ->assertOk()
+            ->assertJsonPath('data.data.final_exam_eligibility.components.zona', 30)
+            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_1', 20)
+            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_2', 20)
+            ->assertJsonPath('data.data.final_exam_eligibility.components.parcial_final', 30)
+            ->assertJsonPath('data.data.final_exam_eligibility.minimum_points', 71)
+            ->assertJsonPath('data.data.final_exam_eligibility.maximum_points_before_final', 70)
+            ->assertJsonPath('data.data.final_exam_eligibility.shortfall', 1)
+            ->assertJsonPath('data.data.final_exam_eligibility.attainable', false);
+    }
+
     public function test_diagnostic_returns_only_the_authenticated_users_audit_events(): void
     {
         DB::table('audit_logs')->insert([
