@@ -41,6 +41,16 @@ class WebViewsTest extends TestCase
         $this->assertStringNotContainsString('<link', $this->get('/register')->getContent());
     }
 
+    public function test_forwarded_https_is_used_for_generated_asset_urls(): void
+    {
+        $response = $this->withServerVariables([
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+        ])->get('/login');
+
+        $response->assertOk();
+        $this->assertStringContainsString('href="https://localhost:8000/favicon.ico"', $response->getContent());
+    }
+
     public function test_registration_creates_user_and_starts_web_session(): void
     {
         $response = $this->post('/register', [
