@@ -71,72 +71,155 @@
             </header>
 
             <main class="content">
-                <section class="card" aria-labelledby="classroom-heading">
-                    <div class="between">
-                        <div>
-                            <p class="eyebrow">Sincronización académica</p>
-                            <h2 id="classroom-heading">Google Classroom</h2>
-                            @if ($classroomConnection)
-                                <p>Conectado como {{ $classroomConnection->google_email }}@if ($classroomConnection->last_synced_at) · Última sincronización: {{ $classroomConnection->last_synced_at->format('d/m/Y H:i') }}@endif</p>
-                            @else
-                                <p>Conecta tu cuenta para importar cursos, tareas y calificaciones.</p>
-                            @endif
+                <section class="classroom-panel" aria-labelledby="classroom-heading">
+                    <div class="classroom-panel-header">
+                        <div class="classroom-brand">
+                            <div class="classroom-brand-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m3.5 7.8 8.5 4.4 8.5-4.4M12 12.2V21" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m7 5.5 9 4.7" stroke="currentColor" stroke-width="1.7"/></svg>
+                            </div>
+                            <div>
+                                <p class="eyebrow">Sincronización académica</p>
+                                <h2 id="classroom-heading">Google Classroom</h2>
+                                <p class="classroom-intro">Tus cursos y entregas, organizados en un solo lugar.</p>
+                            </div>
                         </div>
-                        <div class="st-course-actions">
-                            @if ($classroomConnection)
-                                <form method="POST" action="{{ route('classroom.sync') }}">@csrf<button class="primary" type="submit">Sincronizar ahora</button></form>
-                                <form method="POST" action="{{ route('classroom.disconnect') }}">@csrf @method('DELETE')<button class="outline" type="submit">Desconectar</button></form>
-                            @else
-                                <a class="primary" href="{{ route('classroom.connect') }}">Conectar con Google</a>
-                            @endif
-                        </div>
+                        @if ($classroomConnection)
+                            <span class="classroom-connection-badge"><span></span>Conectado</span>
+                        @else
+                            <span class="classroom-connection-badge is-disconnected"><span></span>Sin conectar</span>
+                        @endif
                     </div>
-                    @if (session('classroom_status'))<p role="status">{{ session('classroom_status') }}</p>@endif
-                    @error('classroom')<p class="st-form-error" role="alert">{{ $message }}</p>@enderror
+
+                    @if ($classroomConnection)
+                        <div class="classroom-account">
+                            <div class="classroom-account-mark" aria-hidden="true">{{ mb_strtoupper(mb_substr($classroomConnection->google_email, 0, 1)) }}</div>
+                            <div class="classroom-account-copy">
+                                <span>Cuenta vinculada</span>
+                                <strong>{{ $classroomConnection->google_email }}</strong>
+                            </div>
+                            <div class="classroom-sync-time">
+                                <span>Última sincronización</span>
+                                <strong>{{ $classroomConnection->last_synced_at?->format('d/m/Y · H:i') ?? 'Aún no sincronizada' }}</strong>
+                            </div>
+                            <div class="classroom-actions">
+                                <form method="POST" action="{{ route('classroom.sync') }}" data-classroom-sync>
+                                    @csrf
+                                    <button class="primary classroom-sync-button" type="submit">
+                                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.1 9A6.5 6.5 0 0 1 17 6.5L20 12M4 12l3 5.5A6.5 6.5 0 0 0 18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        Sincronizar ahora
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('classroom.disconnect') }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="classroom-disconnect-button" type="submit">Desconectar</button>
+                                </form>
+                            </div>
+                        </div>
+                    @else
+                        <div class="classroom-connect-prompt">
+                            <div class="classroom-connect-copy">
+                                <strong>Importa tu espacio académico</strong>
+                                <p>Conecta tu cuenta para traer cursos, tareas y calificaciones. Solo solicitamos permisos de lectura.</p>
+                            </div>
+                            <a class="primary classroom-connect-button" href="{{ route('classroom.connect') }}">
+                                Conectar cuenta
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                        </div>
+                    @endif
+
+                    @if (session('classroom_status'))
+                        <div class="classroom-feedback is-success" role="status">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {{ session('classroom_status') }}
+                        </div>
+                    @endif
+                    @error('classroom')
+                        <div class="classroom-feedback is-error" role="alert">{{ $message }}</div>
+                    @enderror
+
                     @if ($pendingClassroomImports->isNotEmpty())
-                        <div class="line"></div>
-                        <h3>Cursos de Classroom por asignar</h3>
-                        <p>Elige a qué semestre pertenece cada curso o ignóralo. Classroom no indica el semestre académico y no se elimina nada de Google.</p>
-                        @foreach ($pendingClassroomImports as $import)
-                            <article class="card">
-                                <h4>{{ $import->name }}</h4>
-                                <p>{{ $import->course_state === 'ARCHIVED' ? 'Curso archivado' : 'Curso activo' }}@if ($import->code) · {{ $import->code }}@endif</p>
-                                <div class="st-course-actions">
-                                    @if ($semesters->isNotEmpty())
-                                        <form method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
-                                            @csrf
-                                            <label>Agregar a semestre existente
-                                                <select name="semester_id" required>
-                                                    <option value="">Seleccionar semestre</option>
-                                                    @foreach ($semesters as $semester)
-                                                        <option value="{{ $semester->id }}">{{ $semester->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </label>
-                                            <button class="primary" type="submit">Asignar</button>
-                                        </form>
-                                    @endif
-                                    <form method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
-                                        @csrf
-                                        <input type="hidden" name="create_semester" value="1">
-                                        <label>Crear semestre para este curso
-                                            <input name="semester_name" maxlength="100" required placeholder="Primer semestre 2025">
-                                        </label>
-                                        <div class="st-form-grid">
-                                            <label>Inicio<input type="date" name="start_date" required></label>
-                                            <label>Fin<input type="date" name="end_date" required></label>
-                                        </div>
-                                        <button class="outline" type="submit">Crear semestre y asignar</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('classroom.imports.ignore', $import) }}">
-                                        @csrf
-                                        <button class="st-table-button" type="submit">Omitir este curso</button>
-                                    </form>
+                        <div class="classroom-imports">
+                            <div class="classroom-imports-heading">
+                                <div>
+                                    <p class="eyebrow">Organiza tus cursos</p>
+                                    <h3>Cursos por asignar <span>{{ $pendingClassroomImports->count() }}</span></h3>
+                                    <p>Elige un semestre para cada curso. Classroom no indica a qué periodo académico pertenece.</p>
                                 </div>
-                            </article>
-                        @endforeach
+                            </div>
+                            <div class="classroom-import-list">
+                                @foreach ($pendingClassroomImports as $import)
+                                    <article class="classroom-import-card">
+                                        <div class="classroom-import-course">
+                                            <div class="classroom-course-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8m-8 4h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                                            </div>
+                                            <div>
+                                                <h4>{{ $import->name }}</h4>
+                                                <div class="classroom-import-meta">
+                                                    <span class="classroom-course-state {{ $import->course_state === 'ARCHIVED' ? 'is-archived' : '' }}">{{ $import->course_state === 'ARCHIVED' ? 'Archivado' : 'Activo' }}</span>
+                                                    @if ($import->code)<span>{{ $import->code }}</span>@endif
+                                                    @if ($import->section)<span>{{ $import->section }}</span>@endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="classroom-import-options">
+                                            @if ($semesters->isNotEmpty())
+                                                <form class="classroom-option-card" method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
+                                                    @csrf
+                                                    <div class="classroom-option-heading"><span class="classroom-option-number">1</span><div><strong>Usar semestre existente</strong><small>Agrega este curso a uno de tus periodos</small></div></div>
+                                                    <label class="visually-hidden" for="classroom-semester-{{ $import->id }}">Seleccionar semestre existente</label>
+                                                    <select id="classroom-semester-{{ $import->id }}" name="semester_id" required>
+                                                        <option value="">Seleccionar semestre</option>
+                                                        @foreach ($semesters as $semester)
+                                                            <option value="{{ $semester->id }}">{{ $semester->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('semester_id')<span class="classroom-field-error">{{ $message }}</span>@enderror
+                                                    <button class="primary classroom-option-submit" type="submit">Asignar curso</button>
+                                                </form>
+                                            @endif
+                                            <form class="classroom-option-card" method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
+                                                @csrf
+                                                <input type="hidden" name="create_semester" value="1">
+                                                <div class="classroom-option-heading"><span class="classroom-option-number">{{ $semesters->isNotEmpty() ? '2' : '1' }}</span><div><strong>Crear un semestre</strong><small>Ideal para un curso de otro periodo</small></div></div>
+                                                <label class="visually-hidden" for="classroom-semester-name-{{ $import->id }}">Nombre del semestre</label>
+                                                <input id="classroom-semester-name-{{ $import->id }}" name="semester_name" maxlength="100" required placeholder="Ej. Segundo semestre 2025">
+                                                <div class="classroom-date-fields">
+                                                    <label>Fecha de inicio<input type="date" name="start_date" required></label>
+                                                    <label>Fecha de fin<input type="date" name="end_date" required></label>
+                                                </div>
+                                                @error('semester_name')<span class="classroom-field-error">{{ $message }}</span>@enderror
+                                                @error('start_date')<span class="classroom-field-error">{{ $message }}</span>@enderror
+                                                @error('end_date')<span class="classroom-field-error">{{ $message }}</span>@enderror
+                                                <button class="outline classroom-option-submit" type="submit">Crear y asignar</button>
+                                            </form>
+                                        </div>
+                                        <form class="classroom-ignore-form" method="POST" action="{{ route('classroom.imports.ignore', $import) }}">
+                                            @csrf
+                                            <button type="submit">Omitir este curso</button>
+                                        </form>
+                                    </article>
+                                @endforeach
+                            </div>
+                            <p class="classroom-import-note">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v4m0 4h.01M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3l-7.5-13.1a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Omitir solo oculta el curso en StudyTrack; no modifica ni elimina nada en Classroom.
+                            </p>
+                        </div>
                     @endif
                 </section>
+                <div class="classroom-sync-backdrop" id="classroom-sync-modal" hidden>
+                    <div class="classroom-sync-dialog" role="dialog" aria-modal="true" aria-labelledby="classroom-sync-title" aria-describedby="classroom-sync-description" tabindex="-1">
+                        <div class="classroom-sync-spinner" aria-hidden="true"></div>
+                        <p class="eyebrow">Google Classroom</p>
+                        <h2 id="classroom-sync-title">Sincronizando tus cursos</h2>
+                        <p id="classroom-sync-description">Estamos actualizando cursos, actividades y calificaciones. Esto puede tardar unos segundos.</p>
+                        <span class="classroom-sync-progress"><span></span></span>
+                        <span class="visually-hidden" role="status" aria-live="polite">Sincronización en curso</span>
+                    </div>
+                </div>
                 <section class="page active" id="inicio" aria-labelledby="welcome-heading">
                     <div class="hero">
                         <div>

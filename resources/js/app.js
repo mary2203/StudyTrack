@@ -716,9 +716,35 @@ function initStudyTrackForms() {
     });
 }
 
+function initClassroomSyncFeedback() {
+    const form = document.querySelector('[data-classroom-sync]');
+    const modal = document.getElementById('classroom-sync-modal');
+    const button = form?.querySelector('button[type="submit"]');
+    const dialog = modal?.querySelector('[role="dialog"]');
+    if (!form || !modal || !button || !dialog) return;
+
+    form.addEventListener('submit', () => {
+        modal.hidden = false;
+        document.body.classList.add('st-dialog-open');
+        button.disabled = true;
+        button.classList.add('is-loading');
+        button.setAttribute('aria-busy', 'true');
+        dialog.focus();
+    });
+
+    window.addEventListener('pageshow', () => {
+        modal.hidden = true;
+        document.body.classList.remove('st-dialog-open');
+        button.disabled = false;
+        button.classList.remove('is-loading');
+        button.removeAttribute('aria-busy');
+    });
+}
+
 function bootStudyTrack() {
     initStudyTrackNavigation();
     initStudyTrackForms();
+    initClassroomSyncFeedback();
 }
 
 if (document.readyState === 'loading') {

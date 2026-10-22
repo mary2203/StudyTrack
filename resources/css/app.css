@@ -2584,3 +2584,741 @@ summary:focus-visible {
     cursor: wait;
     opacity: .65;
 }
+
+.classroom-panel {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 26px;
+    padding: 25px;
+    border: 1px solid #e3e9d9;
+    border-radius: 20px;
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(222, 234, 202, .55), transparent 38%),
+        #fff;
+    box-shadow: 0 16px 38px rgba(35, 52, 22, .07);
+}
+
+.classroom-panel-header,
+.classroom-brand,
+.classroom-account,
+.classroom-imports-heading,
+.classroom-import-course,
+.classroom-option-heading {
+    display: flex;
+    align-items: center;
+}
+
+.classroom-panel-header {
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.classroom-brand {
+    gap: 15px;
+    min-width: 0;
+}
+
+.classroom-brand-icon {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+    place-items: center;
+    border: 1px solid #d9e5c6;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #f3f7ea, #e6eed8);
+    color: #526b35;
+}
+
+.classroom-brand-icon svg {
+    width: 29px;
+    height: 29px;
+}
+
+.classroom-brand .eyebrow,
+.classroom-imports-heading .eyebrow {
+    margin: 0 0 5px;
+    letter-spacing: 1.35px;
+}
+
+.classroom-brand h2 {
+    margin: 0;
+    color: #26371d;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -.45px;
+}
+
+.classroom-intro {
+    margin: 5px 0 0;
+    color: #718064;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.classroom-connection-badge,
+.classroom-course-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    border: 1px solid #d5e9d7;
+    border-radius: 999px;
+    background: #f0f8ef;
+    color: #39734b;
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.classroom-connection-badge > span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #49a666;
+    box-shadow: 0 0 0 3px rgba(73, 166, 102, .13);
+}
+
+.classroom-connection-badge.is-disconnected {
+    border-color: #e6e9e0;
+    background: #f7f8f5;
+    color: #7b8573;
+}
+
+.classroom-connection-badge.is-disconnected > span {
+    background: #a3aa9b;
+    box-shadow: 0 0 0 3px rgba(128, 139, 117, .12);
+}
+
+.classroom-account {
+    gap: 13px;
+    margin-top: 22px;
+    padding: 15px 16px;
+    border: 1px solid #ebeee6;
+    border-radius: 15px;
+    background: rgba(249, 251, 246, .88);
+}
+
+.classroom-account-mark {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e7eedb;
+    color: #526531;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.classroom-account-copy,
+.classroom-sync-time {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.classroom-account-copy span,
+.classroom-sync-time span {
+    color: #88927e;
+    font-size: 10px;
+}
+
+.classroom-account-copy strong,
+.classroom-sync-time strong {
+    overflow: hidden;
+    color: #34452a;
+    font-size: 12px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.classroom-sync-time {
+    margin-left: auto;
+    padding-left: 17px;
+    border-left: 1px solid #e5eade;
+}
+
+.classroom-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.classroom-actions form {
+    margin: 0;
+}
+
+.classroom-sync-button,
+.classroom-connect-button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 15px;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.classroom-sync-button svg,
+.classroom-connect-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.classroom-sync-button.is-loading svg {
+    animation: classroom-spin .85s linear infinite;
+}
+
+.classroom-disconnect-button {
+    min-height: 40px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #8a665c;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.classroom-disconnect-button:hover {
+    background: #fff3ef;
+    color: #9f4c41;
+}
+
+.classroom-connect-prompt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 17px 19px;
+    border: 1px solid #e7eddd;
+    border-radius: 15px;
+    background: rgba(249, 251, 246, .9);
+}
+
+.classroom-connect-copy strong {
+    color: #35472a;
+    font-size: 13px;
+}
+
+.classroom-connect-copy p {
+    max-width: 540px;
+    margin: 5px 0 0;
+    color: #77836c;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.classroom-feedback {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 11px 13px;
+    border: 1px solid;
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.classroom-feedback svg {
+    width: 16px;
+    height: 16px;
+}
+
+.classroom-feedback.is-success {
+    border-color: #d8ead6;
+    background: #f2f9f0;
+    color: #3f7447;
+}
+
+.classroom-feedback.is-error {
+    border-color: #f1d5d0;
+    background: #fff6f3;
+    color: #9e5147;
+}
+
+.classroom-imports {
+    margin-top: 24px;
+    padding-top: 21px;
+    border-top: 1px solid #e9eee2;
+}
+
+.classroom-imports-heading {
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.classroom-imports-heading h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    color: #2d3e23;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.25px;
+}
+
+.classroom-imports-heading h3 span {
+    display: inline-grid;
+    min-width: 22px;
+    height: 22px;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #edf2e4;
+    color: #5c7040;
+    font-size: 10px;
+}
+
+.classroom-imports-heading > div > p:last-child {
+    margin: 6px 0 0;
+    color: #7a8670;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.classroom-import-list {
+    display: grid;
+    gap: 13px;
+}
+
+.classroom-import-card {
+    padding: 17px;
+    border: 1px solid #e7ebdf;
+    border-radius: 15px;
+    background: #fff;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.classroom-import-card:hover {
+    border-color: #d5dfc7;
+    box-shadow: 0 8px 20px rgba(35, 52, 22, .045);
+}
+
+.classroom-import-course {
+    gap: 11px;
+    min-width: 0;
+}
+
+.classroom-course-icon {
+    display: grid;
+    width: 39px;
+    height: 39px;
+    flex: 0 0 39px;
+    place-items: center;
+    border-radius: 12px;
+    background: #f0f4e8;
+    color: #677a49;
+}
+
+.classroom-course-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.classroom-import-course h4 {
+    overflow: hidden;
+    margin: 0;
+    color: #34452a;
+    font-size: 13px;
+    font-weight: 780;
+    text-overflow: ellipsis;
+}
+
+.classroom-import-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 5px;
+    color: #87917d;
+    font-size: 10px;
+}
+
+.classroom-import-meta > span + span::before {
+    content: "·";
+    margin-right: 7px;
+    color: #b1b9a8;
+}
+
+.classroom-import-meta .classroom-course-state {
+    padding: 3px 8px;
+    border-color: #dbead7;
+    background: #f1f8ef;
+    color: #4c794c;
+    font-size: 9px;
+}
+
+.classroom-import-meta .classroom-course-state.is-archived {
+    border-color: #e5e7e2;
+    background: #f4f5f2;
+    color: #71796b;
+}
+
+.classroom-import-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.classroom-option-card {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+    padding: 13px;
+    border: 1px solid #edf0e8;
+    border-radius: 12px;
+    background: #fafbf8;
+}
+
+.classroom-option-heading {
+    align-items: flex-start;
+    gap: 9px;
+    min-height: 34px;
+}
+
+.classroom-option-number {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    place-items: center;
+    border-radius: 7px;
+    background: #e8eedf;
+    color: #566b39;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.classroom-option-heading strong,
+.classroom-option-heading small {
+    display: block;
+}
+
+.classroom-option-heading strong {
+    margin-top: 1px;
+    color: #435436;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.classroom-option-heading small {
+    margin-top: 3px;
+    color: #8a9381;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.classroom-option-card input,
+.classroom-option-card select {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #dfe6d5;
+    border-radius: 9px;
+    outline: none;
+    background: #fff;
+    color: #37472e;
+    font: inherit;
+    font-size: 11px;
+}
+
+.classroom-option-card input:focus-visible,
+.classroom-option-card select:focus-visible {
+    border-color: #829663;
+    box-shadow: 0 0 0 3px rgba(117, 136, 80, .13);
+}
+
+.classroom-date-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.classroom-date-fields label {
+    display: grid;
+    gap: 5px;
+    color: #748069;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.classroom-date-fields input {
+    font-size: 10px;
+}
+
+.classroom-option-submit {
+    min-height: 36px;
+    justify-self: start;
+    padding: 0 12px;
+    font-size: 10px;
+}
+
+.classroom-option-card .primary,
+.classroom-option-card .outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.classroom-field-error {
+    color: #a14e47;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.classroom-ignore-form {
+    display: flex;
+    justify-content: flex-end;
+    margin: 5px 0 0;
+}
+
+.classroom-ignore-form button {
+    padding: 6px 2px;
+    border: 0;
+    background: transparent;
+    color: #818a78;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.classroom-ignore-form button:hover {
+    color: #a04d47;
+    text-decoration: underline;
+}
+
+.classroom-import-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 13px 0 0;
+    color: #818b78;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.classroom-import-note svg {
+    width: 14px;
+    height: 14px;
+    color: #9a8752;
+}
+
+.classroom-sync-backdrop[hidden] {
+    display: none !important;
+}
+
+.classroom-sync-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(24, 36, 18, .58);
+    backdrop-filter: blur(5px);
+}
+
+.classroom-sync-dialog {
+    width: min(100%, 390px);
+    padding: 31px;
+    border: 1px solid rgba(255, 255, 255, .8);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 28px 90px rgba(12, 21, 9, .28);
+    text-align: center;
+    animation: classroom-modal-in .2s ease-out both;
+}
+
+.classroom-sync-spinner {
+    width: 43px;
+    height: 43px;
+    margin: 0 auto 20px;
+    border: 3px solid #e8eedf;
+    border-top-color: #68804a;
+    border-radius: 50%;
+    animation: classroom-spin .8s linear infinite;
+}
+
+.classroom-sync-dialog .eyebrow {
+    margin: 0 0 8px;
+}
+
+.classroom-sync-dialog h2 {
+    margin: 0;
+    color: #2c3d22;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.45px;
+}
+
+.classroom-sync-dialog > p:not(.eyebrow) {
+    margin: 9px 0 19px;
+    color: #7c8772;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.classroom-sync-progress {
+    display: block;
+    overflow: hidden;
+    height: 5px;
+    border-radius: 99px;
+    background: #edf1e7;
+}
+
+.classroom-sync-progress > span {
+    display: block;
+    width: 38%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #789052, #b4c58e);
+    animation: classroom-progress 1.3s ease-in-out infinite alternate;
+}
+
+@keyframes classroom-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes classroom-progress {
+    from { transform: translateX(-15%); }
+    to { transform: translateX(180%); }
+}
+
+@keyframes classroom-modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 780px) {
+    .classroom-panel {
+        padding: 19px;
+    }
+
+    .classroom-account {
+        flex-wrap: wrap;
+    }
+
+    .classroom-sync-time {
+        flex: 1 1 100%;
+        margin: 0 0 0 51px;
+        padding: 0;
+        border: 0;
+    }
+
+    .classroom-actions {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    .classroom-panel {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .classroom-brand {
+        align-items: flex-start;
+        gap: 11px;
+    }
+
+    .classroom-brand-icon {
+        width: 43px;
+        height: 43px;
+        flex-basis: 43px;
+        border-radius: 13px;
+    }
+
+    .classroom-brand-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .classroom-brand h2 {
+        font-size: 18px;
+    }
+
+    .classroom-panel-header {
+        align-items: flex-start;
+    }
+
+    .classroom-connection-badge {
+        padding: 6px 8px;
+        font-size: 9px;
+    }
+
+    .classroom-connect-prompt {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 14px;
+    }
+
+    .classroom-connect-button {
+        width: 100%;
+    }
+
+    .classroom-account {
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .classroom-account-copy strong {
+        max-width: calc(100vw - 150px);
+    }
+
+    .classroom-sync-time {
+        margin-left: 51px;
+    }
+
+    .classroom-actions {
+        width: 100%;
+        margin: 4px 0 0;
+    }
+
+    .classroom-actions form:first-child {
+        flex: 1;
+    }
+
+    .classroom-sync-button {
+        width: 100%;
+    }
+
+    .classroom-imports {
+        margin-top: 19px;
+        padding-top: 17px;
+    }
+
+    .classroom-import-options {
+        grid-template-columns: 1fr;
+    }
+
+    .classroom-option-card {
+        padding: 12px;
+    }
+
+    .classroom-sync-dialog {
+        padding: 25px 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .classroom-sync-spinner,
+    .classroom-sync-button.is-loading svg,
+    .classroom-sync-progress > span,
+    .classroom-sync-dialog {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

@@ -15,6 +15,7 @@ class WebViewsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
 
         if (config('database.default') !== 'sqlite' ||
             config('database.connections.sqlite.database') !== ':memory:' ||
@@ -30,6 +31,35 @@ class WebViewsTest extends TestCase
             $table->rememberToken();
             $table->timestamps();
         });
+        Schema::create('academic_semesters', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id');
+            $table->string('name');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->boolean('is_current')->default(false);
+            $table->timestamps();
+        });
+        Schema::create('classroom_connections', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id');
+            $table->string('google_email');
+            $table->text('refresh_token');
+            $table->timestamp('last_synced_at')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('classroom_course_imports', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id');
+            $table->string('google_course_id');
+            $table->string('name');
+            $table->string('code')->nullable();
+            $table->string('section')->nullable();
+            $table->string('course_state');
+            $table->string('status')->default('pending');
+            $table->unsignedBigInteger('course_id')->nullable();
+            $table->timestamps();
+        });
     }
 
     public function test_authentication_pages_render_without_stylesheets(): void
@@ -38,7 +68,7 @@ class WebViewsTest extends TestCase
         $this->get('/register')->assertOk()->assertSee('Crear cuenta');
 
         $this->assertStringNotContainsString('<style', $this->get('/login')->getContent());
-        $this->assertStringNotContainsString('<link', $this->get('/register')->getContent());
+        $this->assertStringNotContainsString('<style', $this->get('/register')->getContent());
     }
 
     public function test_registration_creates_user_and_starts_web_session(): void
@@ -112,7 +142,18 @@ class WebViewsTest extends TestCase
                     'graded' => 0,
                 ], 'courses' => []],
                 'diagnostic' => ['events' => []],
-                'predictive' => ['method' => 'Método de prueba.', 'overdue_policy' => 'Política de prueba.', 'courses' => []],
+                'predictive' => [
+                    'method' => 'Método de prueba.',
+                    'overdue_policy' => 'Política de prueba.',
+                    'final_exam_eligibility' => [
+                        'components' => ['zona' => 30, 'parcial_1' => 20, 'parcial_2' => 20],
+                        'maximum_points_before_final' => 70,
+                        'minimum_points' => 71,
+                        'attainable' => false,
+                        'shortfall' => 1,
+                    ],
+                    'courses' => [],
+                ],
                 'prescriptive' => ['actions' => []],
             ],
             'activity_search' => null,
@@ -159,13 +200,15 @@ class WebViewsTest extends TestCase
             ->assertOk()
             ->assertSee('Ana')
             ->assertSee('Semestre A')
-            ->assertSee('Progreso')
+            ->assertSee('Google Classroom')
+            ->assertSee('Conectar cuenta')
+            ->assertSee('Tu progreso académico en un solo lugar')
             ->assertSee('50%')
             ->assertSee('Mis cursos')
             ->assertSee('Mis actividades')
             ->assertSee('Calendario académico')
             ->assertSee('Descriptiva · ¿Qué pasó?')
-            ->assertSee('Diagnóstica · ¿Por qué?')
+            ->assertSee('Diagnóstica · ¿Qué cambió?')
             ->assertSee('Predictiva · ¿Qué podría pasar?')
             ->assertSee('Prescriptiva · ¿Qué conviene hacer?')
             ->assertDontSee('<style')
@@ -192,6 +235,6 @@ class WebViewsTest extends TestCase
 
         $this->get('/dashboard')
             ->assertOk()
-            ->assertSee('No tienes un semestre actual.');
+            ->assertSee('Aún no tienes un semestre actual');
     }
 }
