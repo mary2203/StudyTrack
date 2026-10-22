@@ -24,12 +24,14 @@ class ActivityPolicy
 
     public function update(User $user, Activity $activity): bool
     {
-        return $activity->user_id === $user->id;
+        return $activity->user_id === $user->id
+            && $activity->classroom_coursework_id === null;
     }
 
     public function delete(User $user, Activity $activity): bool
     {
-        return $activity->user_id === $user->id;
+        return $activity->user_id === $user->id
+            && $activity->classroom_coursework_id === null;
     }
 
     public function restore(User $user, Activity $activity): bool

@@ -123,6 +123,7 @@ class DashboardService
                     'id'              => $course->id,
                     'name'            => $course->name,
                     'code'            => $course->code,
+                    'is_classroom_synced' => $course->classroom_course_id !== null,
                     'color_hex'       => $course->color_hex,
                     'current_average' => (float) $course->current_average,
                     'target_grade'    => (float) $course->target_grade,

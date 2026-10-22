@@ -26,6 +26,8 @@ class Activity extends Model
         'status',
         'priority_level_id',
         'completed_at',
+        'classroom_coursework_id',
+        'classroom_submission_state',
     ];
 
     protected $casts = [

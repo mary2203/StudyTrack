@@ -22,6 +22,7 @@ class CourseResource extends JsonResource
             'color_hex' => $this->color_hex,
             'target_grade' => $this->target_grade,
             'current_average' => $this->current_average,
+            'is_classroom_synced' => $this->classroom_course_id !== null,
             
             'priority_rule' => $this->priorityRule ? [
                 'id' => $this->priorityRule->id,

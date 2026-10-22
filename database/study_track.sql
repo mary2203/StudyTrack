@@ -177,11 +177,13 @@ CREATE TABLE `activities` (
   `is_graded` tinyint(1) DEFAULT 1,
   `points_possible` decimal(5,2) DEFAULT 0.00,
   `points_obtained` decimal(5,2) DEFAULT NULL,
-  `due_datetime` datetime NOT NULL,
+  `due_datetime` datetime DEFAULT NULL,
   `estimated_minutes` int(11) DEFAULT 45,
   `status` enum('pending','in_progress','completed','overdue') DEFAULT 'pending',
   `priority_level_id` int(11) DEFAULT NULL,
   `completed_at` datetime DEFAULT NULL,
+  `classroom_coursework_id` varchar(180) DEFAULT NULL,
+  `classroom_submission_state` varchar(30) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `deleted_at` timestamp NULL DEFAULT NULL
@@ -283,6 +285,7 @@ CREATE TABLE `courses` (
   `semester_id` bigint(20) UNSIGNED NOT NULL,
   `name` varchar(150) NOT NULL,
   `code` varchar(50) DEFAULT NULL,
+  `classroom_course_id` varchar(180) DEFAULT NULL,
   `color_hex` varchar(7) DEFAULT '#6C5CE7',
   `target_grade` decimal(5,2) DEFAULT 61.00,
   `current_average` decimal(5,2) DEFAULT 0.00,
@@ -477,6 +480,42 @@ CREATE TABLE `users` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Estructura de tablas para la integración de Classroom
+--
+
+CREATE TABLE `classroom_connections` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `google_email` varchar(255) NOT NULL,
+  `refresh_token` text NOT NULL,
+  `last_synced_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `classroom_connections_user_id_unique` (`user_id`),
+  CONSTRAINT `classroom_connections_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `classroom_course_imports` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `google_course_id` varchar(180) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `code` varchar(50) DEFAULT NULL,
+  `section` varchar(255) DEFAULT NULL,
+  `course_state` varchar(30) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `course_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `classroom_course_imports_user_course_unique` (`user_id`,`google_course_id`),
+  CONSTRAINT `classroom_course_imports_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Volcado de datos para la tabla `users`
 --
@@ -502,7 +541,8 @@ ALTER TABLE `activities`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `course_id` (`course_id`),
-  ADD KEY `priority_level_id` (`priority_level_id`);
+  ADD KEY `priority_level_id` (`priority_level_id`),
+  ADD UNIQUE KEY `activities_user_id_classroom_coursework_id_unique` (`user_id`,`classroom_coursework_id`);
 
 --
 -- Indices de la tabla `audit_logs`
@@ -541,7 +581,8 @@ ALTER TABLE `calendar_events`
 ALTER TABLE `courses`
   ADD PRIMARY KEY (`id`),
   ADD KEY `semester_id` (`semester_id`),
-  ADD KEY `priority_level_id` (`priority_level_id`);
+  ADD KEY `priority_level_id` (`priority_level_id`),
+  ADD KEY `courses_classroom_course_id_index` (`classroom_course_id`);
 
 --
 -- Indices de la tabla `failed_jobs`

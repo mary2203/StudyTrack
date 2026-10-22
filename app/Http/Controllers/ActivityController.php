@@ -117,6 +117,7 @@ class ActivityController extends Controller
 
     public function grade(GradeActivityRequest $request, Activity $activity)
     {
+        Gate::authorize('update', $activity);
         $activity->update($request->validated());
 
         return new ActivityResource($activity->refresh()->load(['course', 'priorityRule']));

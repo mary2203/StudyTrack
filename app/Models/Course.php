@@ -21,6 +21,7 @@ class Course extends Model
         'target_grade',
         'current_average',
         'priority_level_id',
+        'classroom_course_id',
     ];
 
     protected $casts = [

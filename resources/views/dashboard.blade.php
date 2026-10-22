@@ -71,6 +71,72 @@
             </header>
 
             <main class="content">
+                <section class="card" aria-labelledby="classroom-heading">
+                    <div class="between">
+                        <div>
+                            <p class="eyebrow">Sincronización académica</p>
+                            <h2 id="classroom-heading">Google Classroom</h2>
+                            @if ($classroomConnection)
+                                <p>Conectado como {{ $classroomConnection->google_email }}@if ($classroomConnection->last_synced_at) · Última sincronización: {{ $classroomConnection->last_synced_at->format('d/m/Y H:i') }}@endif</p>
+                            @else
+                                <p>Conecta tu cuenta para importar cursos, tareas y calificaciones.</p>
+                            @endif
+                        </div>
+                        <div class="st-course-actions">
+                            @if ($classroomConnection)
+                                <form method="POST" action="{{ route('classroom.sync') }}">@csrf<button class="primary" type="submit">Sincronizar ahora</button></form>
+                                <form method="POST" action="{{ route('classroom.disconnect') }}">@csrf @method('DELETE')<button class="outline" type="submit">Desconectar</button></form>
+                            @else
+                                <a class="primary" href="{{ route('classroom.connect') }}">Conectar con Google</a>
+                            @endif
+                        </div>
+                    </div>
+                    @if (session('classroom_status'))<p role="status">{{ session('classroom_status') }}</p>@endif
+                    @error('classroom')<p class="st-form-error" role="alert">{{ $message }}</p>@enderror
+                    @if ($pendingClassroomImports->isNotEmpty())
+                        <div class="line"></div>
+                        <h3>Cursos de Classroom por asignar</h3>
+                        <p>Elige a qué semestre pertenece cada curso o ignóralo. Classroom no indica el semestre académico y no se elimina nada de Google.</p>
+                        @foreach ($pendingClassroomImports as $import)
+                            <article class="card">
+                                <h4>{{ $import->name }}</h4>
+                                <p>{{ $import->course_state === 'ARCHIVED' ? 'Curso archivado' : 'Curso activo' }}@if ($import->code) · {{ $import->code }}@endif</p>
+                                <div class="st-course-actions">
+                                    @if ($semesters->isNotEmpty())
+                                        <form method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
+                                            @csrf
+                                            <label>Agregar a semestre existente
+                                                <select name="semester_id" required>
+                                                    <option value="">Seleccionar semestre</option>
+                                                    @foreach ($semesters as $semester)
+                                                        <option value="{{ $semester->id }}">{{ $semester->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
+                                            <button class="primary" type="submit">Asignar</button>
+                                        </form>
+                                    @endif
+                                    <form method="POST" action="{{ route('classroom.imports.resolve', $import) }}">
+                                        @csrf
+                                        <input type="hidden" name="create_semester" value="1">
+                                        <label>Crear semestre para este curso
+                                            <input name="semester_name" maxlength="100" required placeholder="Primer semestre 2025">
+                                        </label>
+                                        <div class="st-form-grid">
+                                            <label>Inicio<input type="date" name="start_date" required></label>
+                                            <label>Fin<input type="date" name="end_date" required></label>
+                                        </div>
+                                        <button class="outline" type="submit">Crear semestre y asignar</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('classroom.imports.ignore', $import) }}">
+                                        @csrf
+                                        <button class="st-table-button" type="submit">Omitir este curso</button>
+                                    </form>
+                                </div>
+                            </article>
+                        @endforeach
+                    @endif
+                </section>
                 <section class="page active" id="inicio" aria-labelledby="welcome-heading">
                     <div class="hero">
                         <div>
@@ -194,8 +260,12 @@
                                     @endif
                                     <div class="st-course-actions">
                                         <a class="textlink" href="{{ route('dashboard', ['activity_search' => $course['name']]) }}#actividades">Ver actividades →</a>
-                                        <button type="button" class="st-table-button" data-st-edit-course data-id="{{ $course['id'] ?? '' }}" data-name="{{ $course['name'] }}" data-code="{{ $course['code'] }}" data-grade="{{ $course['target_grade'] }}" data-color="{{ $course['color_hex'] ?? '#526531' }}">Editar</button>
-                                        <button type="button" class="st-table-button st-button-danger" data-st-delete-course data-id="{{ $course['id'] ?? '' }}" data-name="{{ $course['name'] }}" data-code="{{ $course['code'] }}">Eliminar</button>
+                                        @if ($course['is_classroom_synced'])
+                                            <span class="tag">Google Classroom · solo lectura</span>
+                                        @else
+                                            <button type="button" class="st-table-button" data-st-edit-course data-id="{{ $course['id'] ?? '' }}" data-name="{{ $course['name'] }}" data-code="{{ $course['code'] }}" data-grade="{{ $course['target_grade'] }}" data-color="{{ $course['color_hex'] ?? '#526531' }}">Editar</button>
+                                            <button type="button" class="st-table-button st-button-danger" data-st-delete-course data-id="{{ $course['id'] ?? '' }}" data-name="{{ $course['name'] }}" data-code="{{ $course['code'] }}">Eliminar</button>
+                                        @endif
                                     </div>
                                 </article>
                             @empty
@@ -233,14 +303,18 @@
                                                 <tr>
                                                     <th scope="row"><strong>{{ $activity->title }}</strong><small>{{ ucfirst(str_replace('_', ' ', $activity->activity_type)) }}</small></th>
                                                     <td>{{ $activity->course->name ?? 'Sin curso' }}</td>
-                                                    <td>{{ $activity->due_datetime->format('d/m/Y H:i') }}</td>
+                                                    <td>{{ $activity->due_datetime?->format('d/m/Y H:i') ?? 'Sin fecha' }}</td>
                                                     <td>
-                                                        <label class="visually-hidden" for="st-status-{{ $activity->id }}">Estado de {{ $activity->title }}</label>
-                                                        <select class="st-status-select" id="st-status-{{ $activity->id }}" data-st-status data-id="{{ $activity->id }}" data-current="{{ $activity->status }}" title="Cambiar estado de {{ $activity->title }}">
-                                                            @foreach (['pending' => 'Pendiente', 'in_progress' => 'En progreso', 'completed' => 'Completada', 'overdue' => 'Vencida'] as $statusCode => $statusLabel)
-                                                                <option value="{{ $statusCode }}" @selected($activity->status === $statusCode)>{{ $statusLabel }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        @if ($activity->classroom_coursework_id)
+                                                            <span class="tag">{{ ['TURNED_IN' => 'Entregada', 'RETURNED' => 'Calificada', 'NEW' => 'No entregada', 'CREATED' => 'No entregada', 'RECLAIMED_BY_STUDENT' => 'No entregada'][$activity->classroom_submission_state] ?? 'Classroom' }}</span>
+                                                        @else
+                                                            <label class="visually-hidden" for="st-status-{{ $activity->id }}">Estado de {{ $activity->title }}</label>
+                                                            <select class="st-status-select" id="st-status-{{ $activity->id }}" data-st-status data-id="{{ $activity->id }}" data-current="{{ $activity->status }}" title="Cambiar estado de {{ $activity->title }}">
+                                                                @foreach (['pending' => 'Pendiente', 'in_progress' => 'En progreso', 'completed' => 'Completada', 'overdue' => 'Vencida'] as $statusCode => $statusLabel)
+                                                                    <option value="{{ $statusCode }}" @selected($activity->status === $statusCode)>{{ $statusLabel }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @endif
                                                     </td>
                                                     <td>
                                                         @if ($activity->is_graded && $activity->points_obtained !== null)
@@ -253,21 +327,23 @@
                                                     </td>
                                                     <td>
                                                         <div class="st-row-actions">
-                                                            @if ($activity->is_graded)
+                                                            @if ($activity->is_graded && !$activity->classroom_coursework_id)
                                                                 <button type="button" class="st-table-button" data-st-grade data-id="{{ $activity->id }}" data-title="{{ $activity->title }}" data-possible="{{ $activity->points_possible }}" data-obtained="{{ $activity->points_obtained }}">{{ $activity->points_obtained === null ? 'Calificar' : 'Editar nota' }}</button>
                                                             @endif
+                                                            @if (!$activity->classroom_coursework_id)
                                                             <button type="button" class="st-table-button" data-st-edit-activity
                                                                 data-id="{{ $activity->id }}"
                                                                 data-title="{{ $activity->title }}"
                                                                 data-description="{{ $activity->description }}"
                                                                 data-type="{{ $activity->activity_type }}"
                                                                 data-course="{{ $activity->course_id }}"
-                                                                data-due="{{ $activity->due_datetime->format('Y-m-d\TH:i') }}"
+                                                                data-due="{{ $activity->due_datetime?->format('Y-m-d\TH:i') }}"
                                                                 data-graded="{{ $activity->is_graded ? '1' : '0' }}"
                                                                 data-possible="{{ $activity->points_possible }}"
                                                                 data-obtained="{{ $activity->points_obtained }}"
                                                                 data-status="{{ $activity->status }}">Editar</button>
                                                             <button type="button" class="st-table-button st-button-danger" data-st-delete-activity data-id="{{ $activity->id }}" data-title="{{ $activity->title }}">Eliminar</button>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>

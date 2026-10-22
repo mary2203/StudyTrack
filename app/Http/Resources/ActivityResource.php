@@ -19,6 +19,8 @@ class ActivityResource extends JsonResource
             'is_graded' => $this->is_graded,
             'points_possible' => $this->points_possible,
             'points_obtained' => $this->points_obtained,
+            'is_classroom_synced' => $this->classroom_coursework_id !== null,
+            'classroom_submission_state' => $this->classroom_submission_state,
             'due_datetime' => $this->due_datetime?->toIso8601String(),
             'estimated_minutes' => $this->estimated_minutes,
             'status' => $this->status,

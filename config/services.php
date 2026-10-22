@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'google_classroom' => [
+        'client_id' => env('GOOGLE_CLASSROOM_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLASSROOM_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_CLASSROOM_REDIRECT_URI'),
+    ],
+
 ];
