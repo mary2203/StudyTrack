@@ -64,14 +64,9 @@ function initStudyTrackForms() {
     const dashboard = document.querySelector('[data-studytrack-dashboard]');
     if (!dashboard) return;
 
-    const currentUserId = String(dashboard.dataset.userId || '');
-    const currentEmail = dashboard.dataset.userEmail || '';
-    const tokenKey = 'studytrack_api_token';
+    sessionStorage.removeItem('studytrack_api_token');
     const toast = document.getElementById('st-toast');
 
-    let token = sessionStorage.getItem(tokenKey);
-    let apiAuthenticated = false;
-    let pendingAction = null;
     let currentDialog = null;
     let lastFocusedElement = null;
     let toastTimeout;
@@ -112,28 +107,11 @@ function initStudyTrackForms() {
 
     function closeDialog() {
         if (!currentDialog) return;
-        if (currentDialog.id === 'st-modal-auth') {
-            const passwordInput = document.getElementById('st-auth-password');
-            if (passwordInput) passwordInput.value = '';
-            if (pendingAction) {
-                document.querySelectorAll('[data-st-status]').forEach((select) => {
-                    select.disabled = false;
-                    select.value = select.dataset.current;
-                });
-            }
-            pendingAction = null;
-        }
         currentDialog.hidden = true;
         currentDialog = null;
         document.body.classList.remove('st-dialog-open');
         lastFocusedElement?.focus?.();
         lastFocusedElement = null;
-    }
-
-    function resetApiAccess() {
-        apiAuthenticated = false;
-        token = null;
-        sessionStorage.removeItem(tokenKey);
     }
 
     async function parseResponse(response) {
@@ -152,10 +130,13 @@ function initStudyTrackForms() {
         return data;
     }
 
-    async function apiRequest(path, { method = 'GET', body, bearer = token } = {}) {
+    async function apiRequest(path, { method = 'GET', body } = {}) {
         const headers = { Accept: 'application/json' };
         if (body !== undefined) headers['Content-Type'] = 'application/json';
-        if (bearer) headers.Authorization = `Bearer ${bearer}`;
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+        }
 
         const response = await fetch(path, {
             method,
@@ -166,80 +147,16 @@ function initStudyTrackForms() {
         return parseResponse(response);
     }
 
-    function isSameWebUser(apiUser) {
-        if (!apiUser || typeof apiUser !== 'object') return false;
-        if (apiUser.id != null && currentUserId) return String(apiUser.id) === currentUserId;
-        return String(apiUser.email || '').toLowerCase() === currentEmail.toLowerCase();
-    }
-
-    function getResponseUser(response) {
-        const info = response?.data ?? response;
-        return info?.user || info;
-    }
-
-    function promptForApi() {
-        const emailInput = document.getElementById('st-auth-email');
-        if (emailInput) emailInput.value = currentEmail;
-        showDialog('auth');
-    }
-
-    async function verifyApiAccess() {
-        if (apiAuthenticated) return true;
-
-        if (token) {
-            try {
-                const result = await apiRequest('/api/me');
-                if (isSameWebUser(getResponseUser(result))) {
-                    apiAuthenticated = true;
-                    return true;
-                }
-            } catch (_) {
-            }
-            resetApiAccess();
-        }
-
-        try {
-            const result = await apiRequest('/api/me', { bearer: null });
-            if (isSameWebUser(getResponseUser(result))) {
-                apiAuthenticated = true;
-                return true;
-            }
-        } catch (_) {
-        }
-        return false;
-    }
-
     async function requireApi(action) {
         try {
-            if (await verifyApiAccess()) {
-                await action();
-            } else {
-                pendingAction = action;
-                promptForApi();
-            }
+            await action();
         } catch (error) {
             if (error.status === 401) {
-                resetApiAccess();
-                pendingAction = action;
-                promptForApi();
+                notify('Tu sesión venció. Inicia sesión de nuevo para continuar.');
             } else {
                 notify(error.message || 'No se pudo consultar la API.');
             }
         }
-    }
-
-    function extractToken(result) {
-        const possibilities = [
-            result?.data?.token,
-            result?.token,
-            result?.access_token,
-            result?.data?.access_token,
-            result?.data?.plainTextToken,
-            result?.data?.plain_text_token,
-            result?.plainTextToken,
-        ];
-        const value = possibilities.find((v) => typeof v === 'string' && v.length > 10);
-        return value?.replace(/^Bearer\s+/i, '') || null;
     }
 
     function fillSelect(select, records, placeholder = 'No hay registros') {
@@ -362,8 +279,7 @@ function initStudyTrackForms() {
             await operation();
         } catch (error) {
             if (error.status === 401) {
-                resetApiAccess();
-                showFormError(form, 'La conexión con la API venció. Cierra esta ventana y vuelve a intentarlo.');
+                showFormError(form, 'Tu sesión venció. Inicia sesión de nuevo para continuar.');
             } else {
                 showFormError(form, error.message || 'No se pudieron guardar los datos.');
             }
@@ -376,8 +292,6 @@ function initStudyTrackForms() {
         window.location.hash = section;
         window.location.reload();
     }
-
-    dashboard.querySelector('.logout-form')?.addEventListener('submit', resetApiAccess);
 
     document.querySelectorAll('[data-st-open]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -414,43 +328,6 @@ function initStudyTrackForms() {
 
     document.getElementById('st-activity-type')?.addEventListener('change', updateActivityGradeFields);
     document.getElementById('st-activity-graded')?.addEventListener('change', updateActivityGradeFields);
-
-    document.getElementById('st-auth-form')?.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        await submitForm(form, async () => {
-            const passwordInput = document.getElementById('st-auth-password');
-            const password = passwordInput.value;
-            const result = await apiRequest('/api/login', {
-                method: 'POST',
-                bearer: null,
-                body: { email: currentEmail, password },
-            });
-            passwordInput.value = '';
-            const newToken = extractToken(result);
-            if (!newToken) {
-                throw new Error('La API inició sesión, pero no encontré el token en su respuesta. Comparte AuthController.php para ajustar el campo exacto.');
-            }
-            const me = await apiRequest('/api/me', { bearer: newToken });
-            if (!isSameWebUser(getResponseUser(me))) {
-                throw new Error('La cuenta de la API no coincide con la sesión web.');
-            }
-            token = newToken;
-            sessionStorage.setItem(tokenKey, token);
-            apiAuthenticated = true;
-            const action = pendingAction;
-            pendingAction = null;
-            closeDialog();
-            notify('Edición habilitada para esta pestaña.');
-            if (action) {
-                try {
-                    await action();
-                } catch (error) {
-                    notify(error.message || 'No se pudo abrir el formulario.');
-                }
-            }
-        });
-    });
 
     document.getElementById('st-semester-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -747,7 +624,7 @@ function initStudyTrackForms() {
                         throw error;
                     }
                 }).then(() => {
-                    if (!currentDialog || currentDialog.id !== 'st-modal-auth') select.disabled = false;
+                    select.disabled = false;
                 });
             });
         });

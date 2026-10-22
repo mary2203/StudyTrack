@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-studytrack-dashboard data-user-id="{{ $user->id }}" data-user-email="{{ $user->email }}">
+<body data-studytrack-dashboard>
     <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
         <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5h6c2 0 2 1 2 2v14c0-2-2-2-4-2H4V5Zm16 0h-6c-2 0-2 1-2 2v14c0-2 2-2 4-2h4V5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
@@ -475,30 +475,6 @@
                 </section>
 
             </main>
-        </div>
-    </div>
-
-    <div class="st-modal-backdrop" id="st-modal-auth" hidden>
-        <div class="st-dialog" role="dialog" aria-modal="true" aria-labelledby="st-auth-title">
-            <div class="st-dialog-heading">
-                <div><p class="eyebrow">Conexión con la API</p><h2 id="st-auth-title">Habilitar edición</h2></div>
-                <button type="button" class="st-close" data-st-close aria-label="Cerrar">×</button>
-            </div>
-            <p class="st-dialog-description">Tu sesión web está activa, pero la API requiere un token Sanctum. Confirma una vez tu contraseña para crear semestres, cursos y actividades en esta pestaña.</p>
-            <form id="st-auth-form" class="st-form">
-                <label>Correo de tu sesión
-                    <input id="st-auth-email" type="email" readonly autocomplete="username">
-                </label>
-                <label>Contraseña
-                    <input id="st-auth-password" type="password" required autocomplete="current-password">
-                </label>
-                <p class="st-hint">La contraseña se envía a tu API local y no se guarda en el navegador.</p>
-                <div class="st-form-error" role="alert" hidden></div>
-                <div class="st-dialog-actions">
-                    <button type="button" class="outline" data-st-close>Cancelar</button>
-                    <button type="submit" class="primary">Conectar API</button>
-                </div>
-            </form>
         </div>
     </div>
 
