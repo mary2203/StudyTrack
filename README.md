@@ -58,6 +58,15 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
+## Deployment
+
+### Railway
+
+When deploying behind Railway's HTTPS proxy, Laravel must trust the proxy's
+forwarded protocol so generated asset URLs use HTTPS. Set `APP_URL` in the
+Railway service variables to the public HTTPS URL of the app, for example
+`https://studytrack-production-b546.up.railway.app`.
+
 ## StudyTrack analytics API
 
 The authenticated `GET /api/analytics/{level}` endpoint accepts `descriptive`,
