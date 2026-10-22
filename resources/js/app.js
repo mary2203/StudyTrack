@@ -553,21 +553,89 @@ function initStudyTrackForms() {
         });
     });
 
-    document.getElementById('st-clear-filters')?.addEventListener('click', (event) => {
-        const button = event.currentTarget;
-        const search = document.getElementById('activity_search');
-        const status = document.getElementById('activity_status');
-        if (search) search.value = '';
-        if (status) status.value = '';
-        const hasAppliedFilters = window.location.search.includes('activity_search=') ||
-            window.location.search.includes('activity_status=');
-        if (hasAppliedFilters) {
-            const url = new URL(button.dataset.dashboardUrl, window.location.origin);
-            url.searchParams.set('activity_search', '');
-            url.searchParams.set('activity_status', '');
-            url.hash = 'actividades';
-            window.location.assign(url.toString());
+    const activityFilterForm = document.querySelector('.activity-filters');
+    const activitySearch = document.getElementById('activity_search');
+    const activityStatus = document.getElementById('activity_status');
+    let activitySearchTimeout;
+    let activityRequestController;
+
+    async function updateActivityResults(url, historyMode = 'replace') {
+        activityRequestController?.abort();
+        activityRequestController = new AbortController();
+        const requestController = activityRequestController;
+        const currentCard = document.querySelector('.activity-list-card');
+        currentCard?.setAttribute('aria-busy', 'true');
+
+        try {
+            const response = await fetch(url, {
+                headers: { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                signal: requestController.signal,
+            });
+            if (!response.ok) throw new Error(`No se pudieron consultar las actividades (${response.status}).`);
+
+            const document = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const updatedCard = document.querySelector('.activity-list-card');
+            if (!updatedCard) throw new Error('No se pudo actualizar la lista de actividades.');
+
+            currentCard?.replaceWith(updatedCard);
+            bindActivityRowActions();
+
+            const nextUrl = new URL(url, window.location.origin);
+            nextUrl.hash = 'actividades';
+            if (historyMode) window.history[`${historyMode}State`]({}, '', nextUrl);
+        } catch (error) {
+            if (error.name !== 'AbortError') notify(error.message || 'No se pudieron consultar las actividades.');
+        } finally {
+            if (requestController === activityRequestController) {
+                document.querySelector('.activity-list-card')?.removeAttribute('aria-busy');
+            }
         }
+    }
+
+    function applyActivityFilters() {
+        const url = new URL(activityFilterForm.action, window.location.origin);
+        new FormData(activityFilterForm).forEach((value, key) => {
+            if (String(value).trim() !== '') url.searchParams.set(key, String(value));
+        });
+        updateActivityResults(url);
+    }
+
+    activityFilterForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        applyActivityFilters();
+    });
+
+    activitySearch?.addEventListener('input', () => {
+        clearTimeout(activitySearchTimeout);
+        activitySearchTimeout = setTimeout(() => activityFilterForm?.requestSubmit(), 300);
+    });
+
+    activityStatus?.addEventListener('change', () => {
+        clearTimeout(activitySearchTimeout);
+        activityFilterForm?.requestSubmit();
+    });
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('.activity-pagination a');
+        if (!link) return;
+        event.preventDefault();
+        updateActivityResults(link.href, 'push');
+    });
+
+    window.addEventListener('popstate', () => {
+        const url = new URL(window.location.href);
+        if (activitySearch) activitySearch.value = url.searchParams.get('activity_search') || '';
+        if (activityStatus) activityStatus.value = url.searchParams.get('activity_status') || '';
+        updateActivityResults(url, null);
+    });
+
+    document.getElementById('st-clear-filters')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (activitySearch) activitySearch.value = '';
+        if (activityStatus) activityStatus.value = '';
+        clearTimeout(activitySearchTimeout);
+        applyActivityFilters();
     });
 
     async function resolveCourseId(button) {
@@ -621,83 +689,87 @@ function initStudyTrackForms() {
         }));
     });
 
-    document.querySelectorAll('[data-st-edit-activity]').forEach((button) => {
-        button.addEventListener('click', () => requireApi(async () => {
-            const semesters = await loadSemesters();
-            const current = semesters.find((item) => item.is_current === true || item.is_current === 1 || item.is_current === '1');
-            const courses = current ? await loadCourses(current.id) : [];
-            const form = document.getElementById('st-activity-form');
-            form.reset();
-            fillSelect(document.getElementById('st-activity-course'), courses, 'Sin curso');
-            form.elements.editing_id.value = button.dataset.id;
-            form.elements.title.value = button.dataset.title || '';
-            form.elements.description.value = button.dataset.description || '';
-            form.elements.activity_type.value = button.dataset.type || 'task';
-            form.elements.course_id.value = button.dataset.course || '';
-            form.elements.due_datetime.value = button.dataset.due || '';
-            form.elements.status.value = button.dataset.status || 'pending';
-            form.elements.is_graded.checked = button.dataset.graded === '1';
-            form.elements.points_possible.value = button.dataset.possible || '20';
-            form.elements.points_obtained.value = button.dataset.obtained || '';
-            updateActivityGradeFields();
-            document.getElementById('st-activity-title').textContent = 'Editar actividad';
-            form.querySelector('[type="submit"]').textContent = 'Guardar cambios';
-            showDialog('activity');
-        }));
-    });
+    function bindActivityRowActions() {
+        document.querySelectorAll('[data-st-edit-activity]').forEach((button) => {
+            button.addEventListener('click', () => requireApi(async () => {
+                const semesters = await loadSemesters();
+                const current = semesters.find((item) => item.is_current === true || item.is_current === 1 || item.is_current === '1');
+                const courses = current ? await loadCourses(current.id) : [];
+                const form = document.getElementById('st-activity-form');
+                form.reset();
+                fillSelect(document.getElementById('st-activity-course'), courses, 'Sin curso');
+                form.elements.editing_id.value = button.dataset.id;
+                form.elements.title.value = button.dataset.title || '';
+                form.elements.description.value = button.dataset.description || '';
+                form.elements.activity_type.value = button.dataset.type || 'task';
+                form.elements.course_id.value = button.dataset.course || '';
+                form.elements.due_datetime.value = button.dataset.due || '';
+                form.elements.status.value = button.dataset.status || 'pending';
+                form.elements.is_graded.checked = button.dataset.graded === '1';
+                form.elements.points_possible.value = button.dataset.possible || '20';
+                form.elements.points_obtained.value = button.dataset.obtained || '';
+                updateActivityGradeFields();
+                document.getElementById('st-activity-title').textContent = 'Editar actividad';
+                form.querySelector('[type="submit"]').textContent = 'Guardar cambios';
+                showDialog('activity');
+            }));
+        });
 
-    document.querySelectorAll('[data-st-delete-activity]').forEach((button) => {
-        button.addEventListener('click', () => requireApi(async () => {
-            if (!window.confirm(`¿Eliminar la actividad «${button.dataset.title}»? Se retirará de la planificación.`)) return;
-            button.disabled = true;
-            try {
-                await apiRequest(`/api/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
-                refreshDashboard('actividades');
-            } finally {
-                button.disabled = false;
-            }
-        }));
-    });
-
-    document.querySelectorAll('[data-st-status]').forEach((select) => {
-        select.addEventListener('change', () => {
-            const oldValue = select.dataset.current;
-            const newValue = select.value;
-            if (oldValue === newValue) return;
-            select.disabled = true;
-            requireApi(async () => {
+        document.querySelectorAll('[data-st-delete-activity]').forEach((button) => {
+            button.addEventListener('click', () => requireApi(async () => {
+                if (!window.confirm(`¿Eliminar la actividad «${button.dataset.title}»? Se retirará de la planificación.`)) return;
+                button.disabled = true;
                 try {
-                    await apiRequest(`/api/activities/${encodeURIComponent(select.dataset.id)}`, {
-                        method: 'PATCH',
-                        body: { status: newValue },
-                    });
+                    await apiRequest(`/api/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
                     refreshDashboard('actividades');
-                } catch (error) {
-                    select.value = oldValue;
-                    select.disabled = false;
-                    throw error;
+                } finally {
+                    button.disabled = false;
                 }
-            }).then(() => {
-                if (!currentDialog || currentDialog.id !== 'st-modal-auth') select.disabled = false;
-            });
+            }));
         });
-    });
 
-    document.querySelectorAll('[data-st-grade]').forEach((button) => {
-        button.addEventListener('click', () => {
-            requireApi(async () => {
-                const form = document.getElementById('st-grade-form');
-                form.elements.activity_id.value = button.dataset.id;
-                const points = Number(button.dataset.possible);
-                const input = form.elements.points_obtained;
-                input.max = String(points);
-                input.value = button.dataset.obtained || '';
-                document.getElementById('st-grade-description').textContent =
-                    `${button.dataset.title} · Nota máxima: ${points} puntos`;
-                showDialog('grade');
+        document.querySelectorAll('[data-st-status]').forEach((select) => {
+            select.addEventListener('change', () => {
+                const oldValue = select.dataset.current;
+                const newValue = select.value;
+                if (oldValue === newValue) return;
+                select.disabled = true;
+                requireApi(async () => {
+                    try {
+                        await apiRequest(`/api/activities/${encodeURIComponent(select.dataset.id)}`, {
+                            method: 'PATCH',
+                            body: { status: newValue },
+                        });
+                        refreshDashboard('actividades');
+                    } catch (error) {
+                        select.value = oldValue;
+                        select.disabled = false;
+                        throw error;
+                    }
+                }).then(() => {
+                    if (!currentDialog || currentDialog.id !== 'st-modal-auth') select.disabled = false;
+                });
             });
         });
-    });
+
+        document.querySelectorAll('[data-st-grade]').forEach((button) => {
+            button.addEventListener('click', () => {
+                requireApi(async () => {
+                    const form = document.getElementById('st-grade-form');
+                    form.elements.activity_id.value = button.dataset.id;
+                    const points = Number(button.dataset.possible);
+                    const input = form.elements.points_obtained;
+                    input.max = String(points);
+                    input.value = button.dataset.obtained || '';
+                    document.getElementById('st-grade-description').textContent =
+                        `${button.dataset.title} · Nota máxima: ${points} puntos`;
+                    showDialog('grade');
+                });
+            });
+        });
+    }
+
+    bindActivityRowActions();
 
     document.getElementById('st-grade-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();

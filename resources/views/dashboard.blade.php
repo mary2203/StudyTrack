@@ -275,6 +275,24 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                @if ($activities->hasPages())
+                                    <nav class="activity-pagination" aria-label="Paginación de actividades">
+                                        <span>Mostrando {{ $activities->firstItem() }} a {{ $activities->lastItem() }} de {{ $activities->total() }} actividades</span>
+                                        <div class="activity-pagination-controls">
+                                            @if ($activities->onFirstPage())
+                                                <span class="activity-pagination-disabled" aria-disabled="true">Anterior</span>
+                                            @else
+                                                <a href="{{ $activities->previousPageUrl() }}" rel="prev">Anterior</a>
+                                            @endif
+                                            <span class="activity-pagination-page">Página {{ $activities->currentPage() }} de {{ $activities->lastPage() }}</span>
+                                            @if ($activities->hasMorePages())
+                                                <a href="{{ $activities->nextPageUrl() }}" rel="next">Siguiente</a>
+                                            @else
+                                                <span class="activity-pagination-disabled" aria-disabled="true">Siguiente</span>
+                                            @endif
+                                        </div>
+                                    </nav>
+                                @endif
                             @endif
                         </div>
                     @endif
