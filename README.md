@@ -65,14 +65,13 @@ The authenticated `GET /api/analytics/{level}` endpoint accepts `descriptive`,
 
 - **Descriptive:** activity counts and course averages.
 - **Diagnostic:** up to 50 recent audit-log events belonging to the authenticated user.
-- **Predictive:** per-course risk based on whether the target grade is still attainable.
+- **Predictive:** per-course risk based on whether the 71% passing grade is still attainable from the graded activities recorded in StudyTrack.
 - **Prescriptive:** study and recovery actions based on each course's predictive risk.
 
 Predictive risk is an attainability indicator, not a statistically calibrated
-probability. It compares the average needed on remaining graded points with the
-student's average on graded activities: low when the target is already reached
-or the required average is no higher than the current average, medium when a
-higher but attainable average is needed, and high when the target is no longer
-attainable at 100%. Courses without a target or usable grade data return
-`insufficient_data`. Graded activities that are overdue and still ungraded count
-as zero and are not treated as remaining points.
+probability or an official weighted course grade. It compares the points needed
+to reach 71% with the remaining points in activities recorded in StudyTrack.
+The official grading weights (Zona 30%, Parcial 1 20%, Parcial 2 20%, and final
+exam 30%) are shown for context, but the estimate does not apply those weights.
+Graded activities that are overdue and unsubmitted count as zero; submitted
+activities that have not yet been graded remain possible points.
