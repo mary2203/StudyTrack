@@ -40,6 +40,18 @@ class ApiBaseTest extends TestCase
             ->assertJsonPath('data.email', 'prueba@test.com');
     }
 
+    public function test_me_acepta_la_sesion_web_para_una_peticion_stateful(): void
+    {
+        $user = new User(['name' => 'Prueba', 'email' => 'prueba@test.com']);
+        $user->id = 99;
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost')
+            ->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('data.email', 'prueba@test.com');
+    }
+
     public function test_ruta_inexistente_responde_404_en_json(): void
     {
         $this->getJson('/api/no-existe')

@@ -1350,6 +1350,48 @@ summary:focus-visible {
     padding-bottom: 10px;
 }
 
+.activity-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px 4px;
+    color: #869861;
+    font-size: 12px;
+}
+
+.activity-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.activity-pagination-controls a,
+.activity-pagination-disabled {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.activity-pagination-controls a {
+    color: #526531;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.activity-pagination-controls a:hover {
+    background: #f7f9ef;
+}
+
+.activity-pagination-disabled {
+    color: #b5c393;
+}
+
+.activity-pagination-page {
+    white-space: nowrap;
+}
+
 .table-scroll {
     overflow-x: auto;
 }

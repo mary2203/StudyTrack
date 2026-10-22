@@ -38,7 +38,13 @@ class WebDashboardService
                 });
             })
             ->orderBy('due_datetime')
-            ->get();
+            ->orderBy('id')
+            ->paginate(6)
+            ->appends(array_filter([
+                'activity_search' => $search,
+                'activity_status' => $status,
+            ], fn (?string $value) => $value !== null && $value !== ''))
+            ->fragment('actividades');
 
         $weekStart = now()->startOfWeek();
         $weekEnd = $weekStart->copy()->endOfWeek();

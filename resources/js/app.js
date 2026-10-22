@@ -64,14 +64,9 @@ function initStudyTrackForms() {
     const dashboard = document.querySelector('[data-studytrack-dashboard]');
     if (!dashboard) return;
 
-    const currentUserId = String(dashboard.dataset.userId || '');
-    const currentEmail = dashboard.dataset.userEmail || '';
-    const tokenKey = 'studytrack_api_token';
+    sessionStorage.removeItem('studytrack_api_token');
     const toast = document.getElementById('st-toast');
 
-    let token = sessionStorage.getItem(tokenKey);
-    let apiAuthenticated = false;
-    let pendingAction = null;
     let currentDialog = null;
     let lastFocusedElement = null;
     let toastTimeout;
@@ -112,28 +107,11 @@ function initStudyTrackForms() {
 
     function closeDialog() {
         if (!currentDialog) return;
-        if (currentDialog.id === 'st-modal-auth') {
-            const passwordInput = document.getElementById('st-auth-password');
-            if (passwordInput) passwordInput.value = '';
-            if (pendingAction) {
-                document.querySelectorAll('[data-st-status]').forEach((select) => {
-                    select.disabled = false;
-                    select.value = select.dataset.current;
-                });
-            }
-            pendingAction = null;
-        }
         currentDialog.hidden = true;
         currentDialog = null;
         document.body.classList.remove('st-dialog-open');
         lastFocusedElement?.focus?.();
         lastFocusedElement = null;
-    }
-
-    function resetApiAccess() {
-        apiAuthenticated = false;
-        token = null;
-        sessionStorage.removeItem(tokenKey);
     }
 
     async function parseResponse(response) {
@@ -152,10 +130,13 @@ function initStudyTrackForms() {
         return data;
     }
 
-    async function apiRequest(path, { method = 'GET', body, bearer = token } = {}) {
+    async function apiRequest(path, { method = 'GET', body } = {}) {
         const headers = { Accept: 'application/json' };
         if (body !== undefined) headers['Content-Type'] = 'application/json';
-        if (bearer) headers.Authorization = `Bearer ${bearer}`;
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+        }
 
         const response = await fetch(path, {
             method,
@@ -166,80 +147,16 @@ function initStudyTrackForms() {
         return parseResponse(response);
     }
 
-    function isSameWebUser(apiUser) {
-        if (!apiUser || typeof apiUser !== 'object') return false;
-        if (apiUser.id != null && currentUserId) return String(apiUser.id) === currentUserId;
-        return String(apiUser.email || '').toLowerCase() === currentEmail.toLowerCase();
-    }
-
-    function getResponseUser(response) {
-        const info = response?.data ?? response;
-        return info?.user || info;
-    }
-
-    function promptForApi() {
-        const emailInput = document.getElementById('st-auth-email');
-        if (emailInput) emailInput.value = currentEmail;
-        showDialog('auth');
-    }
-
-    async function verifyApiAccess() {
-        if (apiAuthenticated) return true;
-
-        if (token) {
-            try {
-                const result = await apiRequest('/api/me');
-                if (isSameWebUser(getResponseUser(result))) {
-                    apiAuthenticated = true;
-                    return true;
-                }
-            } catch (_) {
-            }
-            resetApiAccess();
-        }
-
-        try {
-            const result = await apiRequest('/api/me', { bearer: null });
-            if (isSameWebUser(getResponseUser(result))) {
-                apiAuthenticated = true;
-                return true;
-            }
-        } catch (_) {
-        }
-        return false;
-    }
-
     async function requireApi(action) {
         try {
-            if (await verifyApiAccess()) {
-                await action();
-            } else {
-                pendingAction = action;
-                promptForApi();
-            }
+            await action();
         } catch (error) {
             if (error.status === 401) {
-                resetApiAccess();
-                pendingAction = action;
-                promptForApi();
+                notify('Tu sesión venció. Inicia sesión de nuevo para continuar.');
             } else {
                 notify(error.message || 'No se pudo consultar la API.');
             }
         }
-    }
-
-    function extractToken(result) {
-        const possibilities = [
-            result?.data?.token,
-            result?.token,
-            result?.access_token,
-            result?.data?.access_token,
-            result?.data?.plainTextToken,
-            result?.data?.plain_text_token,
-            result?.plainTextToken,
-        ];
-        const value = possibilities.find((v) => typeof v === 'string' && v.length > 10);
-        return value?.replace(/^Bearer\s+/i, '') || null;
     }
 
     function fillSelect(select, records, placeholder = 'No hay registros') {
@@ -362,8 +279,7 @@ function initStudyTrackForms() {
             await operation();
         } catch (error) {
             if (error.status === 401) {
-                resetApiAccess();
-                showFormError(form, 'La conexión con la API venció. Cierra esta ventana y vuelve a intentarlo.');
+                showFormError(form, 'Tu sesión venció. Inicia sesión de nuevo para continuar.');
             } else {
                 showFormError(form, error.message || 'No se pudieron guardar los datos.');
             }
@@ -376,8 +292,6 @@ function initStudyTrackForms() {
         window.location.hash = section;
         window.location.reload();
     }
-
-    dashboard.querySelector('.logout-form')?.addEventListener('submit', resetApiAccess);
 
     document.querySelectorAll('[data-st-open]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -414,43 +328,6 @@ function initStudyTrackForms() {
 
     document.getElementById('st-activity-type')?.addEventListener('change', updateActivityGradeFields);
     document.getElementById('st-activity-graded')?.addEventListener('change', updateActivityGradeFields);
-
-    document.getElementById('st-auth-form')?.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        await submitForm(form, async () => {
-            const passwordInput = document.getElementById('st-auth-password');
-            const password = passwordInput.value;
-            const result = await apiRequest('/api/login', {
-                method: 'POST',
-                bearer: null,
-                body: { email: currentEmail, password },
-            });
-            passwordInput.value = '';
-            const newToken = extractToken(result);
-            if (!newToken) {
-                throw new Error('La API inició sesión, pero no encontré el token en su respuesta. Comparte AuthController.php para ajustar el campo exacto.');
-            }
-            const me = await apiRequest('/api/me', { bearer: newToken });
-            if (!isSameWebUser(getResponseUser(me))) {
-                throw new Error('La cuenta de la API no coincide con la sesión web.');
-            }
-            token = newToken;
-            sessionStorage.setItem(tokenKey, token);
-            apiAuthenticated = true;
-            const action = pendingAction;
-            pendingAction = null;
-            closeDialog();
-            notify('Edición habilitada para esta pestaña.');
-            if (action) {
-                try {
-                    await action();
-                } catch (error) {
-                    notify(error.message || 'No se pudo abrir el formulario.');
-                }
-            }
-        });
-    });
 
     document.getElementById('st-semester-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -553,21 +430,89 @@ function initStudyTrackForms() {
         });
     });
 
-    document.getElementById('st-clear-filters')?.addEventListener('click', (event) => {
-        const button = event.currentTarget;
-        const search = document.getElementById('activity_search');
-        const status = document.getElementById('activity_status');
-        if (search) search.value = '';
-        if (status) status.value = '';
-        const hasAppliedFilters = window.location.search.includes('activity_search=') ||
-            window.location.search.includes('activity_status=');
-        if (hasAppliedFilters) {
-            const url = new URL(button.dataset.dashboardUrl, window.location.origin);
-            url.searchParams.set('activity_search', '');
-            url.searchParams.set('activity_status', '');
-            url.hash = 'actividades';
-            window.location.assign(url.toString());
+    const activityFilterForm = document.querySelector('.activity-filters');
+    const activitySearch = document.getElementById('activity_search');
+    const activityStatus = document.getElementById('activity_status');
+    let activitySearchTimeout;
+    let activityRequestController;
+
+    async function updateActivityResults(url, historyMode = 'replace') {
+        activityRequestController?.abort();
+        activityRequestController = new AbortController();
+        const requestController = activityRequestController;
+        const currentCard = document.querySelector('.activity-list-card');
+        currentCard?.setAttribute('aria-busy', 'true');
+
+        try {
+            const response = await fetch(url, {
+                headers: { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                signal: requestController.signal,
+            });
+            if (!response.ok) throw new Error(`No se pudieron consultar las actividades (${response.status}).`);
+
+            const document = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const updatedCard = document.querySelector('.activity-list-card');
+            if (!updatedCard) throw new Error('No se pudo actualizar la lista de actividades.');
+
+            currentCard?.replaceWith(updatedCard);
+            bindActivityRowActions();
+
+            const nextUrl = new URL(url, window.location.origin);
+            nextUrl.hash = 'actividades';
+            if (historyMode) window.history[`${historyMode}State`]({}, '', nextUrl);
+        } catch (error) {
+            if (error.name !== 'AbortError') notify(error.message || 'No se pudieron consultar las actividades.');
+        } finally {
+            if (requestController === activityRequestController) {
+                document.querySelector('.activity-list-card')?.removeAttribute('aria-busy');
+            }
         }
+    }
+
+    function applyActivityFilters() {
+        const url = new URL(activityFilterForm.action, window.location.origin);
+        new FormData(activityFilterForm).forEach((value, key) => {
+            if (String(value).trim() !== '') url.searchParams.set(key, String(value));
+        });
+        updateActivityResults(url);
+    }
+
+    activityFilterForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        applyActivityFilters();
+    });
+
+    activitySearch?.addEventListener('input', () => {
+        clearTimeout(activitySearchTimeout);
+        activitySearchTimeout = setTimeout(() => activityFilterForm?.requestSubmit(), 300);
+    });
+
+    activityStatus?.addEventListener('change', () => {
+        clearTimeout(activitySearchTimeout);
+        activityFilterForm?.requestSubmit();
+    });
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('.activity-pagination a');
+        if (!link) return;
+        event.preventDefault();
+        updateActivityResults(link.href, 'push');
+    });
+
+    window.addEventListener('popstate', () => {
+        const url = new URL(window.location.href);
+        if (activitySearch) activitySearch.value = url.searchParams.get('activity_search') || '';
+        if (activityStatus) activityStatus.value = url.searchParams.get('activity_status') || '';
+        updateActivityResults(url, null);
+    });
+
+    document.getElementById('st-clear-filters')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (activitySearch) activitySearch.value = '';
+        if (activityStatus) activityStatus.value = '';
+        clearTimeout(activitySearchTimeout);
+        applyActivityFilters();
     });
 
     async function resolveCourseId(button) {
@@ -621,83 +566,87 @@ function initStudyTrackForms() {
         }));
     });
 
-    document.querySelectorAll('[data-st-edit-activity]').forEach((button) => {
-        button.addEventListener('click', () => requireApi(async () => {
-            const semesters = await loadSemesters();
-            const current = semesters.find((item) => item.is_current === true || item.is_current === 1 || item.is_current === '1');
-            const courses = current ? await loadCourses(current.id) : [];
-            const form = document.getElementById('st-activity-form');
-            form.reset();
-            fillSelect(document.getElementById('st-activity-course'), courses, 'Sin curso');
-            form.elements.editing_id.value = button.dataset.id;
-            form.elements.title.value = button.dataset.title || '';
-            form.elements.description.value = button.dataset.description || '';
-            form.elements.activity_type.value = button.dataset.type || 'task';
-            form.elements.course_id.value = button.dataset.course || '';
-            form.elements.due_datetime.value = button.dataset.due || '';
-            form.elements.status.value = button.dataset.status || 'pending';
-            form.elements.is_graded.checked = button.dataset.graded === '1';
-            form.elements.points_possible.value = button.dataset.possible || '20';
-            form.elements.points_obtained.value = button.dataset.obtained || '';
-            updateActivityGradeFields();
-            document.getElementById('st-activity-title').textContent = 'Editar actividad';
-            form.querySelector('[type="submit"]').textContent = 'Guardar cambios';
-            showDialog('activity');
-        }));
-    });
+    function bindActivityRowActions() {
+        document.querySelectorAll('[data-st-edit-activity]').forEach((button) => {
+            button.addEventListener('click', () => requireApi(async () => {
+                const semesters = await loadSemesters();
+                const current = semesters.find((item) => item.is_current === true || item.is_current === 1 || item.is_current === '1');
+                const courses = current ? await loadCourses(current.id) : [];
+                const form = document.getElementById('st-activity-form');
+                form.reset();
+                fillSelect(document.getElementById('st-activity-course'), courses, 'Sin curso');
+                form.elements.editing_id.value = button.dataset.id;
+                form.elements.title.value = button.dataset.title || '';
+                form.elements.description.value = button.dataset.description || '';
+                form.elements.activity_type.value = button.dataset.type || 'task';
+                form.elements.course_id.value = button.dataset.course || '';
+                form.elements.due_datetime.value = button.dataset.due || '';
+                form.elements.status.value = button.dataset.status || 'pending';
+                form.elements.is_graded.checked = button.dataset.graded === '1';
+                form.elements.points_possible.value = button.dataset.possible || '20';
+                form.elements.points_obtained.value = button.dataset.obtained || '';
+                updateActivityGradeFields();
+                document.getElementById('st-activity-title').textContent = 'Editar actividad';
+                form.querySelector('[type="submit"]').textContent = 'Guardar cambios';
+                showDialog('activity');
+            }));
+        });
 
-    document.querySelectorAll('[data-st-delete-activity]').forEach((button) => {
-        button.addEventListener('click', () => requireApi(async () => {
-            if (!window.confirm(`¿Eliminar la actividad «${button.dataset.title}»? Se retirará de la planificación.`)) return;
-            button.disabled = true;
-            try {
-                await apiRequest(`/api/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
-                refreshDashboard('actividades');
-            } finally {
-                button.disabled = false;
-            }
-        }));
-    });
-
-    document.querySelectorAll('[data-st-status]').forEach((select) => {
-        select.addEventListener('change', () => {
-            const oldValue = select.dataset.current;
-            const newValue = select.value;
-            if (oldValue === newValue) return;
-            select.disabled = true;
-            requireApi(async () => {
+        document.querySelectorAll('[data-st-delete-activity]').forEach((button) => {
+            button.addEventListener('click', () => requireApi(async () => {
+                if (!window.confirm(`¿Eliminar la actividad «${button.dataset.title}»? Se retirará de la planificación.`)) return;
+                button.disabled = true;
                 try {
-                    await apiRequest(`/api/activities/${encodeURIComponent(select.dataset.id)}`, {
-                        method: 'PATCH',
-                        body: { status: newValue },
-                    });
+                    await apiRequest(`/api/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
                     refreshDashboard('actividades');
-                } catch (error) {
-                    select.value = oldValue;
-                    select.disabled = false;
-                    throw error;
+                } finally {
+                    button.disabled = false;
                 }
-            }).then(() => {
-                if (!currentDialog || currentDialog.id !== 'st-modal-auth') select.disabled = false;
-            });
+            }));
         });
-    });
 
-    document.querySelectorAll('[data-st-grade]').forEach((button) => {
-        button.addEventListener('click', () => {
-            requireApi(async () => {
-                const form = document.getElementById('st-grade-form');
-                form.elements.activity_id.value = button.dataset.id;
-                const points = Number(button.dataset.possible);
-                const input = form.elements.points_obtained;
-                input.max = String(points);
-                input.value = button.dataset.obtained || '';
-                document.getElementById('st-grade-description').textContent =
-                    `${button.dataset.title} · Nota máxima: ${points} puntos`;
-                showDialog('grade');
+        document.querySelectorAll('[data-st-status]').forEach((select) => {
+            select.addEventListener('change', () => {
+                const oldValue = select.dataset.current;
+                const newValue = select.value;
+                if (oldValue === newValue) return;
+                select.disabled = true;
+                requireApi(async () => {
+                    try {
+                        await apiRequest(`/api/activities/${encodeURIComponent(select.dataset.id)}`, {
+                            method: 'PATCH',
+                            body: { status: newValue },
+                        });
+                        refreshDashboard('actividades');
+                    } catch (error) {
+                        select.value = oldValue;
+                        select.disabled = false;
+                        throw error;
+                    }
+                }).then(() => {
+                    select.disabled = false;
+                });
             });
         });
-    });
+
+        document.querySelectorAll('[data-st-grade]').forEach((button) => {
+            button.addEventListener('click', () => {
+                requireApi(async () => {
+                    const form = document.getElementById('st-grade-form');
+                    form.elements.activity_id.value = button.dataset.id;
+                    const points = Number(button.dataset.possible);
+                    const input = form.elements.points_obtained;
+                    input.max = String(points);
+                    input.value = button.dataset.obtained || '';
+                    document.getElementById('st-grade-description').textContent =
+                        `${button.dataset.title} · Nota máxima: ${points} puntos`;
+                    showDialog('grade');
+                });
+            });
+        });
+    }
+
+    bindActivityRowActions();
 
     document.getElementById('st-grade-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
