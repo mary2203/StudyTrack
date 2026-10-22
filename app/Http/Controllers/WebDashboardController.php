@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\WebDashboardService;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class WebDashboardController extends Controller
+{
+    public function index(Request $request, WebDashboardService $dashboard): View
+    {
+        $filters = $request->validate([
+            'activity_search' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'activity_status' => ['sometimes', 'nullable', 'in:pending,in_progress,completed,overdue'],
+        ]);
+
+        return view('dashboard', $dashboard->forUser(
+            $request->user(),
+            $filters['activity_search'] ?? null,
+            $filters['activity_status'] ?? null,
+        ) + ['user' => $request->user()]);
+    }
+}
