@@ -37,20 +37,7 @@ primero.
 
 ### 3. Configurar el entorno local
 
-Copien `.env.example` a `.env` si todavía no existe. En PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-En macOS/Linux:
-
-```bash
-cp .env.example .env
-```
-
-Configuren las variables locales de la aplicación y la base de datos. Como
-mínimo:
+Configuren las nuevas variables locales agregadas:
 
 ```dotenv
 APP_URL=http://localhost:8000
