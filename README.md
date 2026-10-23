@@ -67,6 +67,12 @@ forwarded protocol so generated asset URLs use HTTPS. Set `APP_URL` in the
 Railway service variables to the public HTTPS URL of the app, for example
 `https://studytrack-production-b546.up.railway.app`.
 
+After configuring the MySQL service and its `DB_*` variables, run
+`php artisan migrate --force` against the app service's database. This creates
+the academic tables and installs the stored procedures used by the dashboard;
+the migrations do not import sample users or academic records from
+`database/study_track.sql`.
+
 ## StudyTrack analytics API
 
 The authenticated `GET /api/analytics/{level}` endpoint accepts `descriptive`,
