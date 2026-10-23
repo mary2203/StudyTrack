@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SystemRecommendation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Consultas de recomendaciones del tablón.
@@ -37,11 +38,25 @@ class RecommendationService
                     ->from('system_recommendations as dismissed')
                     ->whereColumn('dismissed.user_id', 'system_recommendations.user_id')
                     ->whereColumn('dismissed.title', 'system_recommendations.title')
-                    ->whereRaw('dismissed.course_id <=> system_recommendations.course_id')
+                    ->where(function ($query) {
+                        $query->whereColumn('dismissed.course_id', 'system_recommendations.course_id')
+                            ->orWhere(function ($query) {
+                                $query->whereNull('dismissed.course_id')
+                                    ->whereNull('system_recommendations.course_id');
+                            });
+                    })
                     ->where('dismissed.is_read', true)
-                    ->whereRaw(
-                        'dismissed.created_at >= DATE_SUB(NOW(), INTERVAL ? HOUR)',
-                        [self::HIDE_AFTER_READ_HOURS]
+                    ->when(
+                        DB::connection()->getDriverName() === 'mysql',
+                        fn ($query) => $query->whereRaw(
+                            'dismissed.created_at >= DATE_SUB(NOW(), INTERVAL ? HOUR)',
+                            [self::HIDE_AFTER_READ_HOURS]
+                        ),
+                        fn ($query) => $query->where(
+                            'dismissed.created_at',
+                            '>=',
+                            now()->subHours(self::HIDE_AFTER_READ_HOURS)
+                        )
                     );
             });
     }
