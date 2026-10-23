@@ -178,7 +178,7 @@ function initStudyTrackForms() {
     }
 
     async function loadCourses(semesterId) {
-        const result = await apiRequest(`/api/courses?semester_id=${encodeURIComponent(semesterId)}`);
+        const result = await apiRequest(`/dashboard-data/courses?semester_id=${encodeURIComponent(semesterId)}`);
         return Array.isArray(result.data) ? result.data : [];
     }
 
@@ -370,7 +370,7 @@ function initStudyTrackForms() {
         await submitForm(form, async () => {
             const fields = new FormData(form);
             const editingId = String(fields.get('editing_id') || '');
-            await apiRequest(editingId ? `/api/courses/${encodeURIComponent(editingId)}` : '/api/courses', {
+            await apiRequest(editingId ? `/dashboard-data/courses/${encodeURIComponent(editingId)}` : '/dashboard-data/courses', {
                 method: editingId ? 'PATCH' : 'POST',
                 body: {
                     semester_id: Number(fields.get('semester_id')),
@@ -422,7 +422,7 @@ function initStudyTrackForms() {
                 }
             }
             const editingId = String(fields.get('editing_id') || '');
-            await apiRequest(editingId ? `/api/activities/${encodeURIComponent(editingId)}` : '/api/activities', {
+            await apiRequest(editingId ? `/dashboard-data/activities/${encodeURIComponent(editingId)}` : '/dashboard-data/activities', {
                 method: editingId ? 'PATCH' : 'POST',
                 body,
             });
@@ -535,7 +535,7 @@ function initStudyTrackForms() {
             const semesters = await loadSemesters();
             const select = document.getElementById('st-course-semester');
             fillSelect(select, semesters, 'No hay semestres');
-            const result = await apiRequest(`/api/courses/${encodeURIComponent(id)}`);
+            const result = await apiRequest(`/dashboard-data/courses/${encodeURIComponent(id)}`);
             const course = result.data || {};
             const form = document.getElementById('st-course-form');
             form.reset();
@@ -558,7 +558,7 @@ function initStudyTrackForms() {
             const id = await resolveCourseId(button);
             button.disabled = true;
             try {
-                await apiRequest(`/api/courses/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                await apiRequest(`/dashboard-data/courses/${encodeURIComponent(id)}`, { method: 'DELETE' });
                 refreshDashboard('cursos');
             } finally {
                 button.disabled = false;
@@ -597,7 +597,7 @@ function initStudyTrackForms() {
                 if (!window.confirm(`¿Eliminar la actividad «${button.dataset.title}»? Se retirará de la planificación.`)) return;
                 button.disabled = true;
                 try {
-                    await apiRequest(`/api/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
+                    await apiRequest(`/dashboard-data/activities/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
                     refreshDashboard('actividades');
                 } finally {
                     button.disabled = false;
@@ -613,7 +613,7 @@ function initStudyTrackForms() {
                 select.disabled = true;
                 requireApi(async () => {
                     try {
-                        await apiRequest(`/api/activities/${encodeURIComponent(select.dataset.id)}`, {
+                        await apiRequest(`/dashboard-data/activities/${encodeURIComponent(select.dataset.id)}`, {
                             method: 'PATCH',
                             body: { status: newValue },
                         });
@@ -656,7 +656,7 @@ function initStudyTrackForms() {
             const score = Number(form.elements.points_obtained.value);
             const max = Number(form.elements.points_obtained.max);
             if (score < 0 || score > max) throw new Error(`La nota debe estar entre 0 y ${max}.`);
-            await apiRequest(`/api/activities/${encodeURIComponent(id)}/grade`, {
+            await apiRequest(`/dashboard-data/activities/${encodeURIComponent(id)}/grade`, {
                 method: 'PATCH',
                 body: { points_obtained: score },
             });
