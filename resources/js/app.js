@@ -173,7 +173,7 @@ function initStudyTrackForms() {
     }
 
     async function loadSemesters() {
-        const result = await apiRequest('/api/semesters');
+        const result = await apiRequest('/dashboard-data/semesters');
         return Array.isArray(result.data) ? result.data : [];
     }
 
@@ -337,7 +337,7 @@ function initStudyTrackForms() {
             const startDate = String(fields.get('start_date'));
             const endDate = String(fields.get('end_date'));
             if (endDate <= startDate) throw new Error('La fecha final debe ser posterior a la inicial.');
-            await apiRequest('/api/semesters', {
+            await apiRequest('/dashboard-data/semesters', {
                 method: 'POST',
                 body: {
                     name: String(fields.get('name')).trim(),
@@ -356,7 +356,7 @@ function initStudyTrackForms() {
         await submitForm(form, async () => {
             const semesterId = String(form.elements.semester_id.value || '');
             if (!semesterId) throw new Error('Selecciona un semestre válido.');
-            await apiRequest(`/api/semesters/${encodeURIComponent(semesterId)}`, {
+            await apiRequest(`/dashboard-data/semesters/${encodeURIComponent(semesterId)}`, {
                 method: 'PATCH',
                 body: { is_current: true },
             });

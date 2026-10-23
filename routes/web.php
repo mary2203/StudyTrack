@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\WebAuthController;
 use App\Http\Controllers\WebDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -16,5 +17,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [WebDashboardController::class, 'index'])->name('dashboard');
+    Route::prefix('dashboard-data')->name('dashboard-data.')->group(function () {
+        Route::apiResource('semesters', SemesterController::class);
+    });
     Route::post('/logout', [WebAuthController::class, 'logout'])->name('logout');
 });
